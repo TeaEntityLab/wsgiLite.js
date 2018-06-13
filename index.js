@@ -2,26 +2,27 @@ var http = require('http');
 var fp = require('fpEs');
 
 class WSGILite {
-  constructor() {
+  constructor(config) {
+    this.config = config ? config : {};
     this.middlewares = [];
 
     const self = this;
     self._server = http.createServer((request, response) => {
-      self.enterMiddlewares(request, response);
-
-      // response.statusCode = 200;
-      // response.setHeader('Content-Type', 'text/plain');
-      // response.end('Hello World!\n');
+      let finished = self.enterMiddlewares(request, response);
+      if (!finished) {
+        response.statusCode = 404;
+        response.setHeader('Content-Type', 'text/plain');
+        response.end('File not found.');
+      }
     });
   }
 
   enterMiddlewares(request, response) {
     this.middlewares.some((middleware)=>{
       middleware(request, response);
-      if (response.finished) {
-        return true;
-      }
+      return response.finished;
     });
+    return response.finished;
   }
 
   addMiddleware(middleware) {
