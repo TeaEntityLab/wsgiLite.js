@@ -25,7 +25,7 @@ const mimeMap = {
 function extendMeta(meta, addition) {
   return Object.assign(meta, addition);
 }
-function addRequestInfosToMeta(request, response, meta) {
+function MiddlewareRequestInfosToMeta(request, response, meta) {
   extendMeta(meta, {
     path: url.parse(request.url).pathname,
   });
@@ -47,6 +47,10 @@ function defineNoCORS(methods) {
     response.setHeader('Access-Control-Allow-Credentials', true);
   }
 }
+function MiddlewareSkip404(meta) {
+  meta.skip404 = true;
+  return meta;
+}
 function defServeFileStatic(baseDir) {
   baseDir = baseDir ? baseDir : '.';
 
@@ -59,6 +63,7 @@ function defServeFileStatic(baseDir) {
     if(!exist) {
       return;
     }
+    MiddlewareSkip404(meta);
 
     response.writeHead(200, {
       'Transfer-Encoding': 'chunked',
@@ -101,7 +106,7 @@ class WSGILite {
   constructor(config) {
     this.config = config ? config : {};
     this.middlewares = [
-      addRequestInfosToMeta,
+      MiddlewareRequestInfosToMeta,
     ];
     this.routes = [];
 
@@ -135,7 +140,7 @@ class WSGILite {
         return response.finished;
       });
     }
-    return response.finished || finishedByMiddleware;
+    return response.finished || finishedByMiddleware || meta.skip404;
   }
 
   addMiddleware(middleware) {
@@ -170,8 +175,9 @@ module.exports = {
   Route,
   WSGILite,
 
-  addRequestInfosToMeta,
+  MiddlewareRequestInfosToMeta,
   defineNoCORS,
   defServeFileStatic,
   extendMeta,
+  MiddlewareSkip404,
 };
