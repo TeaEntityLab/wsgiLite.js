@@ -1,10 +1,11 @@
-var url = require('url');
-var path = require('path');
+const url = require('url');
+const path = require('path');
+const sep = path.sep;
 
-var fs = require('fs');
+const fs = require('fs');
 
-var http = require('http');
-var RouteParser = require('route-parser');
+const http = require('http');
+const RouteParser = require('route-parser');
 
 // maps file extention to MIME typere
 const mimeMap = {
@@ -57,7 +58,7 @@ function defServeFileStatic(baseDir) {
   return function (request, response, meta) {
     const pathname = meta.relativePath ? meta.relativePath : meta.path;
     const ext = path.parse(pathname).ext;
-    const finalPath = `${__dirname}/${baseDir}/${pathname}`;
+    const finalPath = `${__dirname}${sep}${baseDir}${sep}${pathname}`;
 
     var exist = fs.existsSync(finalPath);
     if(!exist) {
@@ -70,15 +71,19 @@ function defServeFileStatic(baseDir) {
       'Content-type': mimeMap[ext] || 'text/plain',
       'X-Content-Type-Options': 'nosniff',
     });
-    // read file from file system
-    fs.readFile(finalPath, function(err, data){
-      if(err){
-        response.statusCode = 500;
-        response.end(`Error getting the file: ${err}.`);
-      } else {
-        // if the file is found, set Content-type and send data
-        response.end(data);
-      }
+    // read file from file
+
+    var stream = fs.createReadStream(finalPath);
+
+    stream.on('data', (chunk) => {
+      response.write(chunk);
+    });
+    stream.on('error', function(err){
+      response.statusCode = 500;
+      response.end(`Error getting the file: ${err}.`);
+    });
+    stream.on('end', () => {
+      response.end();
     });
   }
 }
