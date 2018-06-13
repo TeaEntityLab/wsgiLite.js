@@ -1,5 +1,4 @@
 var http = require('http');
-var fp = require('fpEs');
 
 class WSGILite {
   constructor(config) {
@@ -8,17 +7,21 @@ class WSGILite {
 
     const self = this;
     self._server = http.createServer((request, response) => {
-      let finished = self.enterMiddlewares(request, response);
-      if (!finished) {
-        response.statusCode = 404;
-        response.setHeader('Content-Type', 'text/plain');
-        response.end('File not found.');
-      }
+
+      Promise.resolve(0).then(() => {
+        let finished = self.enterMiddlewares(request, response);
+        if (!finished) {
+          response.statusCode = 404;
+          response.setHeader('Content-Type', 'text/plain');
+          response.end('File not found.');
+        }
+      });
+
     });
   }
 
   enterMiddlewares(request, response) {
-    this.middlewares.some((middleware)=>{
+    this.middlewares.some((middleware) => {
       middleware(request, response);
       return response.finished;
     });
