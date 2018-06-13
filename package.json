@@ -19,6 +19,7 @@
   "homepage": "https://github.com/TeaEntityLab/wsgiLite.js#readme",
   "dependencies": {
     "blueimp-tmpl": "^3.11.0",
-    "fpes": "^1.0.31"
+    "fpes": "^1.0.31",
+    "route-parser": "0.0.5"
   }
 }

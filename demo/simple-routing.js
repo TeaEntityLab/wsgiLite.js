@@ -1,16 +1,3 @@
-# wsgiLite.js
-Lightweight WSGI framework, inspired by ROR &amp; Laravel frameworks
-
-## Installation
-
-```bash
-npm i wsgilite
-```
-
-## Examples
-
-```javascript
-
 const {WSGILite} = require('wsgilite');
 
 const server = new WSGILite();
@@ -30,5 +17,3 @@ server.addRoute('/user/:id', (request, response, meta)=>{
 server.listen(3333, 'localhost', function () {
   console.log('Server up');
 });
-
-```

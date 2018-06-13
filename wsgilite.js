@@ -1,4 +1,23 @@
+var url = require("url");
 var http = require('http');
+var RouteParser = require('route-parser');
+
+
+class Route {
+  constructor(rule, fn) {
+    this.rule = rule;
+    this.fn = fn;
+
+    this.routeParser = new RouteParser(this.rule);
+  }
+
+  matches(request, response, meta) {
+    var result = this.routeParser.match(url.parse(request.url).pathname);
+    if (result) {
+      this.fn(request, response, Object.assign(meta, result));
+    }
+  }
+}
 
 class WSGILite {
   constructor(config) {
@@ -22,10 +41,18 @@ class WSGILite {
   }
 
   enterMiddlewares(request, response) {
-    this.middlewares.concat(this.routes).some((middleware) => {
-      middleware(request, response);
+    let meta = {};
+
+    this.middlewares.some((middleware) => {
+      middleware(request, response, meta);
       return response.finished;
     });
+    if (! response.finished) {
+      this.routes.some((route) => {
+        route.matches(request, response, meta);
+        return response.finished;
+      });
+    }
     return response.finished;
   }
 
@@ -35,9 +62,17 @@ class WSGILite {
   removeMiddleware(middleware) {
     this.middlewares = this.middlewares.filter((item)=>item !== middleware);
   }
-
-  route(rule, fn) {
-    ;
+  addRoute(rule, fn) {
+    this.routes.push(new Route(rule, fn));
+  }
+  removeRoute(obj) {
+    let matches;
+    if (typeof obj === 'function') {
+      matches = (item)=>item.fn !== obj;
+    } else {
+      matches = (item)=>item.rule !== obj;
+    }
+    this.routes = this.routes.filter(matches);
   }
 
   listen(...args) {
@@ -50,5 +85,6 @@ class WSGILite {
 }
 
 module.exports = {
-  WSGILite
+  Route,
+  WSGILite,
 };
