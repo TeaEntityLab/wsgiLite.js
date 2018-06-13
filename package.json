@@ -1,0 +1,24 @@
+{
+  "name": "wsgilite",
+  "version": "1.0.0",
+  "description": "Lightweight WSGI framework, inspired by ROR & Laravel frameworks",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "release": "npm version patch;npm publish;git push --tags"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TeaEntityLab/wsgiLite.js.git"
+  },
+  "author": "John Lee",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/TeaEntityLab/wsgiLite.js/issues"
+  },
+  "homepage": "https://github.com/TeaEntityLab/wsgiLite.js#readme",
+  "dependencies": {
+    "blueimp-tmpl": "^3.11.0",
+    "fpes": "^1.0.31"
+  }
+}
