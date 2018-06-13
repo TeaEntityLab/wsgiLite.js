@@ -41,4 +41,6 @@ class WSGILite {
   }
 }
 
-module.exports = WSGILite;
+module.exports = {
+  WSGILite,
+};
