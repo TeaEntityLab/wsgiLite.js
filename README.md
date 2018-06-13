@@ -11,7 +11,10 @@ npm i wsgilite
 
 ```javascript
 
-const {WSGILite} = require('wsgilite');
+const {
+  WSGILite,
+  defServeFileStatic,
+} = require('wsgilite');
 
 const server = new WSGILite();
 
@@ -23,6 +26,9 @@ server.addRoute('/', (request, response, meta)=>{
 });
 server.addRoute('/user/:id', (request, response, meta)=>{
   return meta; // {"path":"/user/theID","msg":"I got it","id":"theID"}
+});
+server.addRoute('/file/*relativePath', (request, response, meta)=>{
+  defServeFileStatic('demo')(request, response, meta);
 });
 server.addRoute('/heartbeat', (request, response, meta)=>{
   return "ok"; // ok

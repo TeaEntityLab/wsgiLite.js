@@ -55,13 +55,16 @@ function defServeFileStatic(baseDir) {
     const ext = path.parse(pathname).ext;
     const finalPath = `${__dirname}/${baseDir}/${pathname}`;
 
-    console.log({finalPath});
+    var exist = fs.existsSync(finalPath);
+    if(!exist) {
+      return;
+    }
 
-    fs.exists(finalPath, function (exist) {
-      if(!exist) {
-        return;
-      }
-
+    response.writeHead(200, {
+      'Transfer-Encoding': 'chunked',
+      'Content-type': mimeMap[ext] || 'text/plain',
+      'X-Content-Type-Options': 'nosniff',
+    });
     // read file from file system
     fs.readFile(finalPath, function(err, data){
       if(err){
@@ -69,12 +72,9 @@ function defServeFileStatic(baseDir) {
         response.end(`Error getting the file: ${err}.`);
       } else {
         // if the file is found, set Content-type and send data
-        // response.setHeader('Content-type', mimeMap[ext] || 'text/plain' );
-        console.log(data);
         response.end(data);
       }
     });
-  });
   }
 }
 
@@ -123,17 +123,19 @@ class WSGILite {
   enterMiddlewares(request, response) {
     let meta = {};
 
+    let finishedByMiddleware = false;
+
     this.middlewares.some((middleware) => {
-      middleware(request, response, meta);
-      return response.finished;
+      finishedByMiddleware = finishedByMiddleware || middleware(request, response, meta);
+      return response.finished && finishedByMiddleware;
     });
-    if (! response.finished) {
+    if ((! response.finished) && (! finishedByMiddleware)) {
       this.routes.some((route) => {
         route.matches(request, response, meta);
         return response.finished;
       });
     }
-    return response.finished;
+    return response.finished || finishedByMiddleware;
   }
 
   addMiddleware(middleware) {
