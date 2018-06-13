@@ -2,6 +2,11 @@ var url = require("url");
 var http = require('http');
 var RouteParser = require('route-parser');
 
+function addRequestInfosToMeta(request, response, meta) {
+  Object.assign(meta, {
+    path: url.parse(request.url).pathname,
+  });
+}
 
 class Route {
   constructor(rule, fn) {
@@ -25,7 +30,9 @@ class Route {
 class WSGILite {
   constructor(config) {
     this.config = config ? config : {};
-    this.middlewares = [];
+    this.middlewares = [
+      addRequestInfosToMeta,
+    ];
     this.routes = [];
 
     const self = this;
