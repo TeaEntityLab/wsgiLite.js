@@ -12,9 +12,12 @@ class Route {
   }
 
   matches(request, response, meta) {
-    var result = this.routeParser.match(url.parse(request.url).pathname);
-    if (result) {
-      this.fn(request, response, Object.assign(meta, result));
+    var matchesAndParam = this.routeParser.match(url.parse(request.url).pathname);
+    if (matchesAndParam) {
+      var result = this.fn(request, response, Object.assign(meta, matchesAndParam));
+      if (result) {
+        response.end(typeof result === 'string' ? result : JSON.stringify(result));
+      }
     }
   }
 }
