@@ -1,6 +1,6 @@
 {
   "name": "wsgilite",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Lightweight WSGI framework, inspired by ROR & Laravel frameworks",
   "main": "index.js",
   "scripts": {
