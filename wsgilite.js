@@ -5,7 +5,10 @@ const sep = path.sep;
 const fs = require('fs');
 
 const http = require('http');
+
 const RouteParser = require('route-parser');
+const csrfCheck = require('server-csrf-check');
+const cookies = require( "cookies" );
 
 // maps file extention to MIME typere
 const mimeMap = {
@@ -31,7 +34,27 @@ function MiddlewareRequestInfosToMeta(request, response, meta) {
     path: url.parse(request.url).pathname,
   });
 }
-function defineNoCORS(methods) {
+function defCheckRoutes(rules, match) {
+  return function (request, response, meta) {
+    var result = rules.filter((rule)=>(new RouteParser(rule)).match(url.parse(request.url).pathname));
+    if ((!result) || result.length <= 0) {
+      // Not target
+      return;
+    }
+
+    match(request, response, meta);
+  }
+}
+function defHeaderCsrfCheckRoutes(rules) {
+  return defCheckRoutes(rules, function (request, response, meta) {
+    if (! csrfCheck(request, response)) {
+      response.statusCode = 403;
+      response.setHeader('Content-Type', 'text/plain');
+      response.end('CSRF detected.');
+    }
+  });
+}
+function defMiddlewareNoCORS(methods) {
   methods = methods ? methods : ['GET','POST','OPTIONS','PUT','PATCH','DELETE'];
   return function (request, response, meta) {
     // Website you wish to allow to connect
@@ -48,11 +71,11 @@ function defineNoCORS(methods) {
     response.setHeader('Access-Control-Allow-Credentials', true);
   }
 }
-function MiddlewareSkip404(meta) {
+function actionMetaSkip404(meta) {
   meta.skip404 = true;
   return meta;
 }
-function defServeFileStatic(baseDir) {
+function defMiddlewareServeFileStatic(baseDir) {
   baseDir = baseDir ? baseDir : '.';
 
   return function (request, response, meta) {
@@ -64,7 +87,7 @@ function defServeFileStatic(baseDir) {
     if(!exist) {
       return;
     }
-    MiddlewareSkip404(meta);
+    actionMetaSkip404(meta);
 
     response.writeHead(200, {
       'Transfer-Encoding': 'chunked',
@@ -181,8 +204,8 @@ module.exports = {
   WSGILite,
 
   MiddlewareRequestInfosToMeta,
-  defineNoCORS,
-  defServeFileStatic,
+  defMiddlewareNoCORS,
+  defMiddlewareServeFileStatic,
   extendMeta,
-  MiddlewareSkip404,
+  actionMetaSkip404,
 };

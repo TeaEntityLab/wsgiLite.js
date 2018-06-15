@@ -13,8 +13,8 @@ npm i wsgilite
 
 const {
   WSGILite,
-  defServeFileStatic,
-} = require('wsgilite');
+  defMiddlewareServeFileStatic,
+} = require('../wsgilite');
 
 const server = new WSGILite();
 
@@ -28,7 +28,7 @@ server.addRoute('/user/:id', (request, response, meta)=>{
   return meta; // {"path":"/user/theID","msg":"I got it","id":"theID"}
 });
 server.addRoute('/file/*relativePath', (request, response, meta)=>{
-  defServeFileStatic('demo')(request, response, meta);
+  defMiddlewareServeFileStatic('demo')(request, response, meta);
 });
 server.addRoute('/heartbeat', (request, response, meta)=>{
   return "ok"; // ok
