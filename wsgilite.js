@@ -8,7 +8,8 @@ const http = require('http');
 
 const RouteParser = require('route-parser');
 const csrfCheck = require('server-csrf-check');
-const cookies = require( "cookies" );
+const Cookies = require( "cookies" );
+const Tokens = require('csrf')
 
 // maps file extention to MIME typere
 const mimeMap = {
@@ -28,6 +29,17 @@ const mimeMap = {
 
 function extendMeta(meta, addition) {
   return Object.assign(meta, addition);
+}
+function defMiddlewareGenerateCsrf(wsgilite) {
+  return function (request, response, meta) {
+    var token = wsgilite.tokens.create(wsgilite.secret);
+    var cookies = new Cookies(request, response);
+    if (!cookies.get('CSRF_token')) {
+      cookies.set('CSRF_token', token, {
+        maxAge: wsgilite.config.csrfMaxAge,
+      });
+    }
+  }
 }
 function MiddlewareRequestInfosToMeta(request, response, meta) {
   extendMeta(meta, {
@@ -133,8 +145,12 @@ class Route {
 class WSGILite {
   constructor(config) {
     this.config = config ? config : {};
+    this.config.csrfMaxAge = this.config.csrfMaxAge ? this.config.csrfMaxAge : 2*1000*60*60;
+    this.tokens = new Tokens();
+    this.secret = this.config.secret ? this.config.secret : this.tokens.secretSync();
     this.middlewares = [
       MiddlewareRequestInfosToMeta,
+      defMiddlewareGenerateCsrf(this),
     ];
     this.routes = [];
 

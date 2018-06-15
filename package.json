@@ -21,6 +21,7 @@
     "blueimp-tmpl": "^3.11.0",
     "cookies": "^0.7.1",
     "csrf": "^3.0.6",
+    "formidable": "^1.2.1",
     "fpes": "^1.0.31",
     "route-parser": "0.0.5",
     "server-csrf-check": "^1.0.0"
