@@ -17,7 +17,7 @@ server.addMiddleware(async (request, response, meta)=>{
 server.addMiddleware(function * (request, response, meta) {
   return Promise.resolve(0).then(()=>meta.msg2 = 'I got it2');
 });
-server.addMiddleware(async (request, response, meta)=>{
+server.addMiddleware((request, response, meta)=>{
   meta.msg = 'I got it';
 });
 server.addMiddleware(defFormCsrfCheckRoutes([
