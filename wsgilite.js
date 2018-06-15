@@ -244,13 +244,6 @@ class WSGILite {
   removeMiddleware(middleware) {
     this.middlewares = this.middlewares.filter((item)=>item !== middleware);
   }
-  defMethod(method, rule, fn) {
-    this.addRoute(rule, function (request, response, meta) {
-      if (request.method == method) {
-        return fn(request, response, meta);
-      }
-    });
-  }
   addRoute(rule, fn) {
     this.routes.push(new Route(rule, fn));
   }
@@ -262,6 +255,41 @@ class WSGILite {
       matches = (item)=>item.rule !== obj;
     }
     this.routes = this.routes.filter(matches);
+  }
+  defMethod(method, rule, fn) {
+    this.addRoute(rule, function (request, response, meta) {
+      if (request.method == method) {
+        return fn(request, response, meta);
+      }
+    });
+  }
+
+  GET(rule, fn) {
+    this.defMethod('GET', rule, fn);
+  }
+  HEAD(rule, fn) {
+    this.defMethod('HEAD', rule, fn);
+  }
+  POST(rule, fn) {
+    this.defMethod('POST', rule, fn);
+  }
+  PUT(rule, fn) {
+    this.defMethod('PUT', rule, fn);
+  }
+  DELETE(rule, fn) {
+    this.defMethod('DELETE', rule, fn);
+  }
+  CONNECT(rule, fn) {
+    this.defMethod('CONNECT', rule, fn);
+  }
+  OPTIONS(rule, fn) {
+    this.defMethod('OPTIONS', rule, fn);
+  }
+  TRACE(rule, fn) {
+    this.defMethod('TRACE', rule, fn);
+  }
+  PATCH(rule, fn) {
+    this.defMethod('PATCH', rule, fn);
   }
 
   listen(...args) {
