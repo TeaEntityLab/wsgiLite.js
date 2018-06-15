@@ -61,9 +61,14 @@ function generateCSRFFormInput(request, response) {
   return `<input type="hidden" name="CSRF_token" id="csrf-token" value="${getCSRF_token(request, response)}" />`;
 }
 function defMiddlewareGenerateCsrf(wsgilite) {
+  if (!wsgilite) {throw new Error('wsgilite is not given')}
+
   return function (request, response, meta) {
-    var token = wsgilite.tokens.create(wsgilite.secret);
-    if (!getCSRF_token(request, response)) {
+    var CSRF_token = getCSRF_token(request, response);
+    if ((!CSRF_token) || (!wsgilite.tokens.verify(wsgilite.secret, CSRF_token))) {
+
+      var token = wsgilite.tokens.create(wsgilite.secret);
+
       var cookies = new Cookies(request, response);
       cookies.set('CSRF_token', token, {
         maxAge: wsgilite.config.csrfMaxAge,
@@ -71,20 +76,24 @@ function defMiddlewareGenerateCsrf(wsgilite) {
     }
   }
 }
-function defFormCsrfCheckRoutes(rules) {
+function defFormCsrfCheckRoutes(rules, wsgilite) {
+  if (!wsgilite) {throw new Error('wsgilite is not given')}
+
   return defCheckRoutes(rules, function (request, response, meta) {
     var CSRF_token = getCSRF_token(request, response);
 
-    if (CSRF_token != meta.CSRF_token) {
+    if (CSRF_token != meta.CSRF_token || (!wsgilite.tokens.verify(wsgilite.secret, CSRF_token))) {
       response.statusCode = 403;
       response.setHeader('Content-Type', 'text/plain');
       response.end('CSRF detected.');
     }
   });
 }
-function defHeaderCsrfCheckRoutes(rules) {
+function defHeaderCsrfCheckRoutes(rules, wsgilite) {
+  if (!wsgilite) {throw new Error('wsgilite is not given')}
+
   return defCheckRoutes(rules, function (request, response, meta) {
-    if (! csrfCheck(request, response)) {
+    if ((! csrfCheck(request, response)) || false) {
       response.statusCode = 403;
       response.setHeader('Content-Type', 'text/plain');
       response.end('CSRF detected.');

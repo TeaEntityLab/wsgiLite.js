@@ -6,14 +6,16 @@ const {
   generateCSRFFormInput,
 } = require('../wsgilite');
 
-const server = new WSGILite();
+const server = new WSGILite({
+  secret: 'abcdefg',
+});
 
 server.addMiddleware((request, response, meta)=>{
   meta.msg = 'I got it';
 });
 server.addMiddleware(defFormCsrfCheckRoutes([
   '/upload',
-]));
+], server));
 server.GET('/', (request, response, meta)=>{
   response.end(JSON.stringify(meta)); // {"path":"/","msg":"I got it"}
 });
