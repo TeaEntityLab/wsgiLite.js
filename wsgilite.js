@@ -265,18 +265,27 @@ class WSGILite {
         }
       }
 
-      let finishedByMiddleware = false;
-      self.middlewares.some((middleware) => {
-        finishedByMiddleware = finishedByMiddleware || middleware(request, response, meta);
-        return response.finished && finishedByMiddleware;
-      });
+      for (var i = 0; i < self.middlewares.length; i++) {
+        var middleware = self.middlewares[i];
+        if (response.finished) {
+          break;
+        }
 
-      if ((! response.finished) && (! finishedByMiddleware)) {
-        var anyPromiseResult = undefined;
+        var anyPromiseResult = middleware(request, response, meta);
+        if (anyPromiseResult) {
+          if ((middleware instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction) === true) {
+            yield anyPromiseResult;
+          } else if (typeof anyPromiseResult.next === 'function') {
+            MonadIO.doM(()=>anyPromiseResult);
+          }
+        }
+      }
+
+      if (! response.finished) {
 
         for (var i = 0; i < self.routes.length; i++) {
           let route = self.routes[i]
-          anyPromiseResult = route.matches(request, response, meta);
+          var anyPromiseResult = route.matches(request, response, meta);
           if (anyPromiseResult) {
             yield anyPromiseResult;
           }
@@ -287,7 +296,7 @@ class WSGILite {
         }
       }
 
-      return response.finished || finishedByMiddleware || meta.skip404;
+      return response.finished || meta.skip404;
     });
   }
 

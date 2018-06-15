@@ -17,13 +17,19 @@ const {
   defHeaderCsrfCheckRoutes,
   getCSRF_token,
   generateCSRFFormInput,
-} = require('wsgilite');
+} = require('../wsgilite');
 
 const server = new WSGILite({
   secret: 'abcdefg',
 });
 
-server.addMiddleware((request, response, meta)=>{
+server.addMiddleware(async (request, response, meta)=>{
+  meta.msg3 = 'I got it3';
+});
+server.addMiddleware(function * (request, response, meta) {
+  meta.msg2 = 'I got it2';
+});
+server.addMiddleware(async (request, response, meta)=>{
   meta.msg = 'I got it';
 });
 server.addMiddleware(defFormCsrfCheckRoutes([
@@ -33,10 +39,10 @@ server.addMiddleware(defHeaderCsrfCheckRoutes([
   '/upload2',
 ], server));
 server.GET('/', (request, response, meta)=>{
-  response.end(JSON.stringify(meta)); // {"url_path":"/","msg":"I got it"}
+  response.end(JSON.stringify(meta)); // {"url_path":"/","msg3":"I got it3","msg2":"I got it2","msg":"I got it"}
 });
 server.GET('/user/:id', function *(request, response, meta) {
-  return yield Promise.resolve(meta); // {"url_path":"/user/theID","msg":"I got it","id":"theID"}
+  return yield Promise.resolve(meta); // {"url_path":"/user/theID","msg3":"I got it3","msg2":"I got it2","msg":"I got it","id":"theID"}
 });
 server.GET('/file/*relativePath', (request, response, meta)=>{
   defMiddlewareServeFileStatic('demo')(request, response, meta);
