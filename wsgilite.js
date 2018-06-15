@@ -9,7 +9,6 @@ const http = require('http');
 const RouteParser = require('route-parser');
 const formidable = require('formidable')
 
-const csrfCheck = require('server-csrf-check');
 const Cookies = require( "cookies" );
 const Tokens = require('csrf')
 
@@ -93,7 +92,9 @@ function defHeaderCsrfCheckRoutes(rules, wsgilite) {
   if (!wsgilite) {throw new Error('wsgilite is not given')}
 
   return defCheckRoutes(rules, function (request, response, meta) {
-    if ((! csrfCheck(request, response)) || false) {
+    var CSRF_token = request.headers['x-csrf-token'];
+
+    if ((CSRF_token != meta.CSRF_token) || (!wsgilite.tokens.verify(wsgilite.secret, CSRF_token))) {
       response.statusCode = 403;
       response.setHeader('Content-Type', 'text/plain');
       response.end('CSRF detected.');
@@ -182,7 +183,11 @@ class WSGILite {
     this.config.csrfMaxAge = this.config.csrfMaxAge ? this.config.csrfMaxAge : 2*1000*60*60;
     this.config.enableFormParsing = this.config.enableFormParsing ? this.config.enableFormParsing : true;
     this.tokens = new Tokens();
-    this.secret = this.config.secret ? this.config.secret : this.tokens.secretSync();
+    // this.secret = this.config.secret ? this.config.secret : this.tokens.secretSync();
+    if (!this.config.secret) {
+      throw new Error('WSGILite needs secret key.\nFor Examples:\nvar server = new WSGILite({"secret":"asdfasdf"});');
+    }
+    this.secret = this.config.secret;
     this.middlewares = [
       MiddlewareRequestInfosToMeta,
       defMiddlewareGenerateCsrf(this),

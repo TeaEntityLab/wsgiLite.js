@@ -14,6 +14,7 @@ const {
   WSGILite,
   defMiddlewareServeFileStatic,
   defFormCsrfCheckRoutes,
+  defHeaderCsrfCheckRoutes,
   getCSRF_token,
   generateCSRFFormInput,
 } = require('wsgilite');
@@ -27,6 +28,9 @@ server.addMiddleware((request, response, meta)=>{
 });
 server.addMiddleware(defFormCsrfCheckRoutes([
   '/upload',
+], server));
+server.addMiddleware(defHeaderCsrfCheckRoutes([
+  '/upload2',
 ], server));
 server.GET('/', (request, response, meta)=>{
   response.end(JSON.stringify(meta)); // {"path":"/","msg":"I got it"}
@@ -42,6 +46,9 @@ server.GET('/csrf', (request, response, meta)=>{
 });
 server.POST('/upload', (request, response, meta)=>{
   return 'CSRF_token ok'; // CSRF_token ok
+});
+server.POST('/upload2', (request, response, meta)=>{
+  return 'x-csrf-token ok'; // x-csrf-token ok
 });
 server.GET('/heartbeat', (request, response, meta)=>{
   return "ok"; // ok
