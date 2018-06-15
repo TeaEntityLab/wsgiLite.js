@@ -14,6 +14,9 @@ const Tokens = require('csrf')
 
 const MonadIO = require('fpEs/monadio');
 
+const AsyncFunction = (async () => {}).constructor;
+const GeneratorFunction = (function* () {}).constructor;
+
 // maps file extention to MIME typere
 const mimeMap = {
   '.ico': 'image/x-icon',
@@ -169,10 +172,36 @@ class Route {
   matches(request, response, meta) {
     var matchesAndParam = this.routeParser.match(url.parse(request.url).pathname);
     if (matchesAndParam) {
-      var result = this.fn(request, response, extendMeta(meta, matchesAndParam));
-      if (result) {
-        response.end(typeof result === 'string' ? result : JSON.stringify(result));
+      var self = this;
+
+      if (self.fn instanceof AsyncFunction) {
+        return self.fn(request, response, meta).then((v)=>{
+          self.tryReturn(response, v);
+          return;
+        });
       }
+
+      var result = self.fn(request, response, extendMeta(meta, matchesAndParam));
+      var hasResult = !!result;
+      if (result && typeof result.next === 'function') {
+        result = MonadIO.doM(()=>result);
+
+        if (result && typeof result.then === 'function') {
+          return result.then((v)=>{
+            self.tryReturn(response, v);
+            return;
+          });
+        }
+      }
+
+      if (hasResult) {
+        self.tryReturn(response, result);
+      }
+    }
+  }
+  tryReturn(response, result) {
+    if (result) {
+      response.end(typeof result === 'string' ? result : JSON.stringify(result));
     }
   }
 }
@@ -243,11 +272,21 @@ class WSGILite {
       });
 
       if ((! response.finished) && (! finishedByMiddleware)) {
-        self.routes.some((route) => {
-          route.matches(request, response, meta);
-          return response.finished;
-        });
+        var anyPromiseResult = undefined;
+
+        for (var i = 0; i < self.routes.length; i++) {
+          let route = self.routes[i]
+          anyPromiseResult = route.matches(request, response, meta);
+          if (anyPromiseResult) {
+            yield anyPromiseResult;
+          }
+
+          if (response.finished) {
+            break;
+          }
+        }
       }
+
       return response.finished || finishedByMiddleware || meta.skip404;
     });
   }
@@ -271,11 +310,19 @@ class WSGILite {
     this.routes = this.routes.filter(matches);
   }
   defMethod(method, rule, fn) {
-    this.addRoute(rule, function (request, response, meta) {
+    var checker = function (request, response, meta) {
       if (request.method == method) {
         return fn(request, response, meta);
       }
-    });
+    };
+
+    if ((fn instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction) === true) {
+      this.addRoute(rule, async function (request, response, meta) {
+        return checker(request, response, meta);
+      });
+    } else {
+      this.addRoute(rule, checker);
+    }
   }
 
   GET(rule, fn) {

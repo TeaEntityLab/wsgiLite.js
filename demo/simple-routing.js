@@ -21,24 +21,24 @@ server.addMiddleware(defHeaderCsrfCheckRoutes([
   '/upload2',
 ], server));
 server.GET('/', (request, response, meta)=>{
-  response.end(JSON.stringify(meta)); // {"path":"/","msg":"I got it"}
+  response.end(JSON.stringify(meta)); // {"url_path":"/","msg":"I got it"}
 });
-server.GET('/user/:id', (request, response, meta)=>{
-  return meta; // {"path":"/user/theID","msg":"I got it","id":"theID"}
+server.GET('/user/:id', function *(request, response, meta) {
+  return yield Promise.resolve(meta); // {"url_path":"/user/theID","msg":"I got it","id":"theID"}
 });
 server.GET('/file/*relativePath', (request, response, meta)=>{
   defMiddlewareServeFileStatic('demo')(request, response, meta);
 });
-server.GET('/csrf', (request, response, meta)=>{
+server.GET('/csrf', function *(request, response, meta) {
   return getCSRF_token(request, response) + ` ${generateCSRFFormInput(request, response)}`; // CSRF_token
 });
 server.POST('/upload', (request, response, meta)=>{
   return 'CSRF_token ok'; // CSRF_token ok
 });
 server.POST('/upload2', (request, response, meta)=>{
-  return 'CSRF_token ok'; // CSRF_token ok
+  return 'x-csrf-token ok'; // x-csrf-token ok
 });
-server.GET('/heartbeat', (request, response, meta)=>{
+server.GET('/heartbeat', async (request, response, meta)=>{
   return "ok"; // ok
 });
 
