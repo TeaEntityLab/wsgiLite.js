@@ -17,7 +17,7 @@ const {
   defHeaderCsrfCheckRoutes,
   getCSRF_token,
   generateCSRFFormInput,
-} = require('../wsgilite');
+} = require('wsgilite');
 
 const server = new WSGILite({
   secret: 'abcdefg',
@@ -58,6 +58,15 @@ server.POST('/upload2', (request, response, meta)=>{
 });
 server.GET('/heartbeat', async (request, response, meta)=>{
   return "ok"; // ok
+});
+server.defSubRoute('test', function (defSub) {
+  defSub.defSubRoute('change', function (defSub) {
+    defSub.defSubRoute('for', function (defSub) {
+      defSub.GET('it', async (request, response, meta)=>{
+        return "Here we go"; // Here we go
+      })
+    });
+  });
 });
 
 server.listen(3333, 'localhost', function () {

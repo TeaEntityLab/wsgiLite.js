@@ -16,6 +16,16 @@ const MonadIO = require('fpEs/monadio');
 
 const AsyncFunction = (async () => {}).constructor;
 const GeneratorFunction = (function* () {}).constructor;
+function isAsyncFunction(fn) {
+  // return fn instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction === true;
+  return fn instanceof AsyncFunction;
+}
+function isNextable(obj) {
+  return obj && typeof obj.next === 'function';
+}
+function isThenable(obj) {
+  return obj && typeof obj.then === 'function';
+}
 
 // maps file extention to MIME typere
 const mimeMap = {
@@ -174,7 +184,7 @@ class Route {
     if (matchesAndParam) {
       var self = this;
 
-      if (self.fn instanceof AsyncFunction) {
+      if (isAsyncFunction(self.fn)) {
         return self.fn(request, response, meta).then((v)=>{
           self.tryReturn(response, v);
           return;
@@ -183,10 +193,10 @@ class Route {
 
       var result = self.fn(request, response, extendMeta(meta, matchesAndParam));
       var hasResult = !!result;
-      if (result && typeof result.next === 'function') {
-        result = MonadIO.doM(()=>result);
+      if (isNextable(result)) {
+        result = MonadIO.generatorToPromise(()=>result);
 
-        if (result && typeof result.then === 'function') {
+        if (isThenable(result)) {
           return result.then((v)=>{
             self.tryReturn(response, v);
             return;
@@ -206,8 +216,53 @@ class Route {
   }
 }
 
-class WSGILite {
+class DefSubRoute {
+  constructor(parent, rule) {
+    this.parent = parent;
+    this.rule = rule;
+  }
+
+  defSubRoute(rule, defFn) {
+    defFn(new DefSubRoute(this, rule));
+  }
+
+  defMethod(method, rule, fn) {
+    var upperPath = `${this.rule}/${rule}`;
+    this.parent.defMethod(method, upperPath, fn);
+  }
+
+  GET(rule, fn) {
+    this.defMethod('GET', rule, fn);
+  }
+  HEAD(rule, fn) {
+    this.defMethod('HEAD', rule, fn);
+  }
+  POST(rule, fn) {
+    this.defMethod('POST', rule, fn);
+  }
+  PUT(rule, fn) {
+    this.defMethod('PUT', rule, fn);
+  }
+  DELETE(rule, fn) {
+    this.defMethod('DELETE', rule, fn);
+  }
+  CONNECT(rule, fn) {
+    this.defMethod('CONNECT', rule, fn);
+  }
+  OPTIONS(rule, fn) {
+    this.defMethod('OPTIONS', rule, fn);
+  }
+  TRACE(rule, fn) {
+    this.defMethod('TRACE', rule, fn);
+  }
+  PATCH(rule, fn) {
+    this.defMethod('PATCH', rule, fn);
+  }
+}
+
+class WSGILite extends DefSubRoute {
   constructor(config) {
+    super(null, '');
     this.config = config ? config : {};
     this.config.csrfMaxAge = this.config.csrfMaxAge ? this.config.csrfMaxAge : 2*1000*60*60;
     this.config.enableFormParsing = this.config.enableFormParsing ? this.config.enableFormParsing : true;
@@ -239,7 +294,7 @@ class WSGILite {
 
   enterMiddlewares(request, response) {
     const self = this;
-    return MonadIO.doM(function *() {
+    return MonadIO.generatorToPromise(function *() {
       let meta = {};
 
       if (self.config.enableFormParsing) {
@@ -273,12 +328,12 @@ class WSGILite {
 
         var anyPromiseResult = middleware(request, response, meta);
         if (anyPromiseResult) {
-          if ((middleware instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction) === true) {
+          if (isAsyncFunction(middleware)) {
             anyPromiseResult = yield anyPromiseResult;
-          } else if (typeof anyPromiseResult.next === 'function') {
-            anyPromiseResult = MonadIO.doM(()=>anyPromiseResult);
+          } else if (isNextable(anyPromiseResult)) {
+            anyPromiseResult = MonadIO.generatorToPromise(()=>anyPromiseResult);
           }
-          if (anyPromiseResult && typeof anyPromiseResult.then === 'function') {
+          if (isThenable(anyPromiseResult)) {
             yield anyPromiseResult;
           }
         }
@@ -328,7 +383,7 @@ class WSGILite {
       }
     };
 
-    if ((fn instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction) === true) {
+    if (isAsyncFunction(fn)) {
       this.addRoute(rule, async function (request, response, meta) {
         return checker(request, response, meta);
       });
@@ -336,33 +391,14 @@ class WSGILite {
       this.addRoute(rule, checker);
     }
   }
-
-  GET(rule, fn) {
-    this.defMethod('GET', rule, fn);
-  }
-  HEAD(rule, fn) {
-    this.defMethod('HEAD', rule, fn);
-  }
-  POST(rule, fn) {
-    this.defMethod('POST', rule, fn);
-  }
-  PUT(rule, fn) {
-    this.defMethod('PUT', rule, fn);
-  }
-  DELETE(rule, fn) {
-    this.defMethod('DELETE', rule, fn);
-  }
-  CONNECT(rule, fn) {
-    this.defMethod('CONNECT', rule, fn);
-  }
-  OPTIONS(rule, fn) {
-    this.defMethod('OPTIONS', rule, fn);
-  }
-  TRACE(rule, fn) {
-    this.defMethod('TRACE', rule, fn);
-  }
-  PATCH(rule, fn) {
-    this.defMethod('PATCH', rule, fn);
+  defSubRoute(rule, defFn) {
+    if ((!rule) || rule.length <= 0) {
+      rule = '/';
+    }
+    if (rule[0] !== '/') {
+      rule = `/${rule}`;
+    }
+    DefSubRoute.prototype.defSubRoute.call(this, rule, defFn);
   }
 
   listen(...args) {
