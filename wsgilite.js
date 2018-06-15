@@ -172,7 +172,8 @@ function defMiddlewareServeFileStatic(baseDir) {
 }
 
 class Route {
-  constructor(rule, fn) {
+  constructor(wsgilite, rule, fn) {
+    this.wsgilite = wsgilite;
     this.rule = rule;
     this.fn = fn;
 
@@ -228,35 +229,35 @@ class DefSubRoute {
 
   defMethod(method, rule, fn) {
     var upperPath = `${this.rule}/${rule}`;
-    this.parent.defMethod(method, upperPath, fn);
+    return this.parent.defMethod(method, upperPath, fn);
   }
 
   GET(rule, fn) {
-    this.defMethod('GET', rule, fn);
+    return this.defMethod('GET', rule, fn);
   }
   HEAD(rule, fn) {
-    this.defMethod('HEAD', rule, fn);
+    return this.defMethod('HEAD', rule, fn);
   }
   POST(rule, fn) {
-    this.defMethod('POST', rule, fn);
+    return this.defMethod('POST', rule, fn);
   }
   PUT(rule, fn) {
-    this.defMethod('PUT', rule, fn);
+    return this.defMethod('PUT', rule, fn);
   }
   DELETE(rule, fn) {
-    this.defMethod('DELETE', rule, fn);
+    return this.defMethod('DELETE', rule, fn);
   }
   CONNECT(rule, fn) {
-    this.defMethod('CONNECT', rule, fn);
+    return this.defMethod('CONNECT', rule, fn);
   }
   OPTIONS(rule, fn) {
-    this.defMethod('OPTIONS', rule, fn);
+    return this.defMethod('OPTIONS', rule, fn);
   }
   TRACE(rule, fn) {
-    this.defMethod('TRACE', rule, fn);
+    return this.defMethod('TRACE', rule, fn);
   }
   PATCH(rule, fn) {
-    this.defMethod('PATCH', rule, fn);
+    return this.defMethod('PATCH', rule, fn);
   }
 }
 
@@ -365,7 +366,10 @@ class WSGILite extends DefSubRoute {
     this.middlewares = this.middlewares.filter((item)=>item !== middleware);
   }
   addRoute(rule, fn) {
-    this.routes.push(new Route(rule, fn));
+    var route = new Route(this, rule, fn);
+    this.routes.push(route);
+
+    return route;
   }
   removeRoute(obj) {
     let matches;
@@ -384,11 +388,11 @@ class WSGILite extends DefSubRoute {
     };
 
     if (isAsyncFunction(fn)) {
-      this.addRoute(rule, async function (request, response, meta) {
+      return this.addRoute(rule, async function (request, response, meta) {
         return checker(request, response, meta);
       });
     } else {
-      this.addRoute(rule, checker);
+      return this.addRoute(rule, checker);
     }
   }
   defSubRoute(rule, defFn) {
