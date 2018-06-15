@@ -52,11 +52,19 @@ function defCheckRoutes(rules, match) {
     match(request, response, meta);
   }
 }
+function getCSRF_token(request, response) {
+  var cookies = new Cookies(request, response);
+  var CSRF_token = cookies.get('CSRF_token');
+  return CSRF_token;
+}
+function generateCSRFFormInput(request, response) {
+  return `<input type="hidden" name="CSRF_token" id="csrf-token" value="${getCSRF_token(request, response)}" />`;
+}
 function defMiddlewareGenerateCsrf(wsgilite) {
   return function (request, response, meta) {
     var token = wsgilite.tokens.create(wsgilite.secret);
-    var cookies = new Cookies(request, response);
-    if (!cookies.get('CSRF_token')) {
+    if (!getCSRF_token(request, response)) {
+      var cookies = new Cookies(request, response);
       cookies.set('CSRF_token', token, {
         maxAge: wsgilite.config.csrfMaxAge,
       });
@@ -65,7 +73,9 @@ function defMiddlewareGenerateCsrf(wsgilite) {
 }
 function defFormCsrfCheckRoutes(rules) {
   return defCheckRoutes(rules, function (request, response, meta) {
-    if (! csrfCheck(request, response)) {
+    var CSRF_token = getCSRF_token(request, response);
+
+    if (CSRF_token != meta.CSRF_token) {
       response.statusCode = 403;
       response.setHeader('Content-Type', 'text/plain');
       response.end('CSRF detected.');
@@ -260,9 +270,15 @@ module.exports = {
   WSGILite,
 
   MiddlewareRequestInfosToMeta,
+
+  extendMeta,
+  actionMetaSkip404,
+
   defMiddlewareNoCORS,
   defMiddlewareServeFileStatic,
   defHeaderCsrfCheckRoutes,
-  extendMeta,
-  actionMetaSkip404,
+  defFormCsrfCheckRoutes,
+
+  getCSRF_token,
+  generateCSRFFormInput,
 };
