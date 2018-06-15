@@ -15,7 +15,7 @@ server.addMiddleware(async (request, response, meta)=>{
   meta.msg3 = 'I got it3';
 });
 server.addMiddleware(function * (request, response, meta) {
-  meta.msg2 = 'I got it2';
+  return Promise.resolve(0).then(()=>meta.msg2 = 'I got it2');
 });
 server.addMiddleware(async (request, response, meta)=>{
   meta.msg = 'I got it';

@@ -274,9 +274,12 @@ class WSGILite {
         var anyPromiseResult = middleware(request, response, meta);
         if (anyPromiseResult) {
           if ((middleware instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction) === true) {
-            yield anyPromiseResult;
+            anyPromiseResult = yield anyPromiseResult;
           } else if (typeof anyPromiseResult.next === 'function') {
-            MonadIO.doM(()=>anyPromiseResult);
+            anyPromiseResult = MonadIO.doM(()=>anyPromiseResult);
+          }
+          if (anyPromiseResult && typeof anyPromiseResult.then === 'function') {
+            yield anyPromiseResult;
           }
         }
       }
