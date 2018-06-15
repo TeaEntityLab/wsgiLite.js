@@ -26,22 +26,22 @@ server.addMiddleware((request, response, meta)=>{
 server.addMiddleware(defFormCsrfCheckRoutes([
   '/upload',
 ]));
-server.addRoute('/', (request, response, meta)=>{
+server.defMethod('GET', '/', (request, response, meta)=>{
   response.end(JSON.stringify(meta)); // {"path":"/","msg":"I got it"}
 });
-server.addRoute('/user/:id', (request, response, meta)=>{
+server.defMethod('GET', '/user/:id', (request, response, meta)=>{
   return meta; // {"path":"/user/theID","msg":"I got it","id":"theID"}
 });
-server.addRoute('/file/*relativePath', (request, response, meta)=>{
+server.defMethod('GET', '/file/*relativePath', (request, response, meta)=>{
   defMiddlewareServeFileStatic('demo')(request, response, meta);
 });
-server.addRoute('/csrf', (request, response, meta)=>{
+server.defMethod('GET', '/csrf', (request, response, meta)=>{
   return getCSRF_token(request, response) + ` ${generateCSRFFormInput(request, response)}`; // CSRF_token
 });
-server.addRoute('/upload', (request, response, meta)=>{
+server.defMethod('POST', '/upload', (request, response, meta)=>{
   return 'CSRF_token ok'; // CSRF_token ok
 });
-server.addRoute('/heartbeat', (request, response, meta)=>{
+server.defMethod('GET', '/heartbeat', (request, response, meta)=>{
   return "ok"; // ok
 });
 
