@@ -214,6 +214,7 @@ class WSGILite {
         });
 
         if (err) {
+          console.log(err);
           response.statusCode = 500;
           response.setHeader('Content-Type', 'text/plain');
           response.end('500 Internal Server Error');
@@ -242,6 +243,13 @@ class WSGILite {
   }
   removeMiddleware(middleware) {
     this.middlewares = this.middlewares.filter((item)=>item !== middleware);
+  }
+  defMethod(method, rule, fn) {
+    this.addRoute(rule, function (request, response, meta) {
+      if (request.method == method) {
+        return fn(request, response, meta);
+      }
+    });
   }
   addRoute(rule, fn) {
     this.routes.push(new Route(rule, fn));
