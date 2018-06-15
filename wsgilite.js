@@ -7,12 +7,13 @@ const fs = require('fs');
 const http = require('http');
 
 const RouteParser = require('route-parser');
-const queryString = require('query-string');
 const formidable = require('formidable')
 
 const csrfCheck = require('server-csrf-check');
 const Cookies = require( "cookies" );
 const Tokens = require('csrf')
+
+const MonadIO = require('fpEs/monadio');
 
 // maps file extention to MIME typere
 const mimeMap = {
@@ -160,6 +161,7 @@ class WSGILite {
   constructor(config) {
     this.config = config ? config : {};
     this.config.csrfMaxAge = this.config.csrfMaxAge ? this.config.csrfMaxAge : 2*1000*60*60;
+    this.config.enableFormParsing = this.config.enableFormParsing ? this.config.enableFormParsing : true;
     this.tokens = new Tokens();
     this.secret = this.config.secret ? this.config.secret : this.tokens.secretSync();
     this.middlewares = [
@@ -171,12 +173,11 @@ class WSGILite {
     const self = this;
     self._server = http.createServer((request, response) => {
 
-      Promise.resolve(0).then(() => {
-        let finished = self.enterMiddlewares(request, response);
+      Promise.resolve(0).then(()=>self.enterMiddlewares(request, response)).then((finished) => {
         if (!finished) {
           response.statusCode = 404;
           response.setHeader('Content-Type', 'text/plain');
-          response.end('File not found.');
+          response.end('404 File not found.');
         }
       });
 
@@ -184,21 +185,46 @@ class WSGILite {
   }
 
   enterMiddlewares(request, response) {
-    let meta = {};
+    const self = this;
+    return MonadIO.doM(function *() {
+      let meta = {};
 
-    let finishedByMiddleware = false;
+      if (self.config.enableFormParsing) {
+        var err = yield new Promise(function(resolve, reject) {
+          var form = new formidable.IncomingForm();
+          form.parse(request, function(err, fields, files) {
+            if (err) {
+              reject(err);
+              return;
+            }
 
-    this.middlewares.some((middleware) => {
-      finishedByMiddleware = finishedByMiddleware || middleware(request, response, meta);
-      return response.finished && finishedByMiddleware;
-    });
-    if ((! response.finished) && (! finishedByMiddleware)) {
-      this.routes.some((route) => {
-        route.matches(request, response, meta);
-        return response.finished;
+            meta = Object.assign(meta, fields, files);
+            resolve();
+          });
+        });
+
+        if (err) {
+          response.statusCode = 500;
+          response.setHeader('Content-Type', 'text/plain');
+          response.end('500 Internal Server Error');
+          return true;
+        }
+      }
+
+      let finishedByMiddleware = false;
+      self.middlewares.some((middleware) => {
+        finishedByMiddleware = finishedByMiddleware || middleware(request, response, meta);
+        return response.finished && finishedByMiddleware;
       });
-    }
-    return response.finished || finishedByMiddleware || meta.skip404;
+
+      if ((! response.finished) && (! finishedByMiddleware)) {
+        self.routes.some((route) => {
+          route.matches(request, response, meta);
+          return response.finished;
+        });
+      }
+      return response.finished || finishedByMiddleware || meta.skip404;
+    });
   }
 
   addMiddleware(middleware) {
