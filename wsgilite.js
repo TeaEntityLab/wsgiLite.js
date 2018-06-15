@@ -7,6 +7,9 @@ const fs = require('fs');
 const http = require('http');
 
 const RouteParser = require('route-parser');
+const queryString = require('query-string');
+const formidable = require('formidable')
+
 const csrfCheck = require('server-csrf-check');
 const Cookies = require( "cookies" );
 const Tokens = require('csrf')
@@ -30,20 +33,11 @@ const mimeMap = {
 function extendMeta(meta, addition) {
   return Object.assign(meta, addition);
 }
-function defMiddlewareGenerateCsrf(wsgilite) {
-  return function (request, response, meta) {
-    var token = wsgilite.tokens.create(wsgilite.secret);
-    var cookies = new Cookies(request, response);
-    if (!cookies.get('CSRF_token')) {
-      cookies.set('CSRF_token', token, {
-        maxAge: wsgilite.config.csrfMaxAge,
-      });
-    }
-  }
-}
 function MiddlewareRequestInfosToMeta(request, response, meta) {
+  var url_parts = url.parse(request.url, true);
   extendMeta(meta, {
-    path: url.parse(request.url).pathname,
+    ...url_parts.query,
+    url_path: url_parts.pathname,
   });
 }
 function defCheckRoutes(rules, match) {
@@ -56,6 +50,26 @@ function defCheckRoutes(rules, match) {
 
     match(request, response, meta);
   }
+}
+function defMiddlewareGenerateCsrf(wsgilite) {
+  return function (request, response, meta) {
+    var token = wsgilite.tokens.create(wsgilite.secret);
+    var cookies = new Cookies(request, response);
+    if (!cookies.get('CSRF_token')) {
+      cookies.set('CSRF_token', token, {
+        maxAge: wsgilite.config.csrfMaxAge,
+      });
+    }
+  }
+}
+function defFormCsrfCheckRoutes(rules) {
+  return defCheckRoutes(rules, function (request, response, meta) {
+    if (! csrfCheck(request, response)) {
+      response.statusCode = 403;
+      response.setHeader('Content-Type', 'text/plain');
+      response.end('CSRF detected.');
+    }
+  });
 }
 function defHeaderCsrfCheckRoutes(rules) {
   return defCheckRoutes(rules, function (request, response, meta) {
@@ -91,7 +105,7 @@ function defMiddlewareServeFileStatic(baseDir) {
   baseDir = baseDir ? baseDir : '.';
 
   return function (request, response, meta) {
-    const pathname = meta.relativePath ? meta.relativePath : meta.path;
+    const pathname = meta.relativePath ? meta.relativePath : meta.url_path;
     const ext = path.parse(pathname).ext;
     const finalPath = `${__dirname}${sep}${baseDir}${sep}${pathname}`;
 
@@ -222,6 +236,7 @@ module.exports = {
   MiddlewareRequestInfosToMeta,
   defMiddlewareNoCORS,
   defMiddlewareServeFileStatic,
+  defHeaderCsrfCheckRoutes,
   extendMeta,
   actionMetaSkip404,
 };
