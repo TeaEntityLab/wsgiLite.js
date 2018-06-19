@@ -1,0 +1,9 @@
+<!DOCTYPE HTML>
+<title>{%=o.title%}</title>
+<h3><a href="{%=o.url%}">{%=o.title%}</a></h3>
+<h4>Features</h4>
+<ul>
+{% for (var i=0; i<o.features.length; i++) { %}
+    <li>{%=o.features[i]%}</li>
+{% } %}
+</ul>

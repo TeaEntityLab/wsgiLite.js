@@ -1,4 +1,12 @@
 # wsgiLite.js
+
+[![npm download](https://img.shields.io/npm/dt/wsgilite.svg)](https://www.npmjs.com/package/wsgilite)
+[![npm version](https://img.shields.io/npm/v/wsgilite.svg)](https://www.npmjs.com/package/wsgilite)
+
+[![license](https://img.shields.io/github/license/TeaEntityLab/wsgiLite.js.svg?style=social&label=License)](https://github.com/TeaEntityLab/wsgiLite.js)
+[![stars](https://img.shields.io/github/stars/TeaEntityLab/wsgiLite.js.svg?style=social&label=Stars)](https://github.com/TeaEntityLab/wsgiLite.js)
+[![forks](https://img.shields.io/github/forks/TeaEntityLab/wsgiLite.js.svg?style=social&label=Fork)](https://github.com/TeaEntityLab/wsgiLite.js)
+
 Lightweight WSGI framework, inspired by ROR &amp; Laravel frameworks
 
 ## Installation
@@ -17,10 +25,14 @@ const {
   defHeaderCsrfCheckRoutes,
   getCSRF_token,
   generateCSRFFormInput,
+  Template,
 } = require('wsgilite');
 
 const server = new WSGILite({
   secret: 'abcdefg',
+});
+const template = new Template({
+  baseDir: "demo/template",
 });
 
 server.addMiddleware(async (request, response, meta)=>{
@@ -67,6 +79,17 @@ server.defSubRoute('test', function (defSub) {
       })
     });
   });
+});
+server.GET('/template', async (request, response, meta)=>{
+  return template.render("features", {
+            "title": "JavaScript Templates",
+            "url": "https://github.com/blueimp/JavaScript-Templates",
+            "features": [
+                "lightweight & fast",
+                "powerful",
+                "zero dependencies"
+            ]
+        }); // ok
 });
 
 server.listen(3333, 'localhost', function () {

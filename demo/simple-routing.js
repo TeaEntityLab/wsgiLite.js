@@ -6,9 +6,15 @@ const {
   getCSRF_token,
   generateCSRFFormInput,
 } = require('../wsgilite');
+const {
+  Template,
+} = require('../template');
 
 const server = new WSGILite({
   secret: 'abcdefg',
+});
+const template = new Template({
+  baseDir: "demo/template",
 });
 
 server.addMiddleware(async (request, response, meta)=>{
@@ -55,6 +61,17 @@ server.defSubRoute('test', function (defSub) {
       })
     });
   });
+});
+server.GET('/template', async (request, response, meta)=>{
+  return template.render("features", {
+            "title": "JavaScript Templates",
+            "url": "https://github.com/blueimp/JavaScript-Templates",
+            "features": [
+                "lightweight & fast",
+                "powerful",
+                "zero dependencies"
+            ]
+        }); // ok
 });
 
 server.listen(3333, 'localhost', function () {
