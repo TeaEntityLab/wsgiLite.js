@@ -13,6 +13,7 @@ const Cookies = require( "cookies" );
 const Tokens = require('csrf')
 
 const MonadIO = require('fpEs/monadio');
+const Maybe = require('fpEs/maybe');
 
 const AsyncFunction = (async () => {}).constructor;
 const GeneratorFunction = (function* () {}).constructor;
@@ -193,7 +194,6 @@ class Route {
       }
 
       var result = self.fn(request, response, extendMeta(meta, matchesAndParam));
-      var hasResult = !!result;
       if (isNextable(result)) {
         result = MonadIO.generatorToPromise(()=>result);
 
@@ -205,13 +205,13 @@ class Route {
         }
       }
 
-      if (hasResult) {
+      if (Maybe.just(result).isPresent()) {
         self.tryReturn(response, result);
       }
     }
   }
   tryReturn(response, result) {
-    if (result) {
+    if (Maybe.just(result).isPresent()) {
       response.end(typeof result === 'string' ? result : JSON.stringify(result));
     }
   }
