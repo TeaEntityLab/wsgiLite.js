@@ -194,6 +194,10 @@ class Route {
       actionMetaSkip404(meta);
       if (self.timeout > 0) {
         setTimeout(()=>{
+          if (response.finished) {
+            return;
+          }
+
           response.statusCode = 504;
           response.end(self.timeoutMessage);
 
