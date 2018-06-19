@@ -178,6 +178,9 @@ class Route {
     this.rule = rule;
     this.fn = fn;
 
+    this.timeout = 120*1000;
+    this.timeoutMessage = '504 Gateway Timeout';
+
     this.routeParser = new RouteParser(this.rule);
   }
 
@@ -185,6 +188,16 @@ class Route {
     var matchesAndParam = this.routeParser.match(url.parse(request.url).pathname);
     if (matchesAndParam) {
       var self = this;
+
+      actionMetaSkip404(meta);
+      if (self.timeout > 0) {
+        setTimeout(()=>{
+          response.statusCode = 504;
+          response.end(self.timeoutMessage);
+
+          console.log(`Execution Timeout: '${self.rule}' -> ${self.timeout}ms`)
+        }, self.timeout);
+      }
 
       if (isAsyncFunction(self.fn)) {
         return self.fn(request, response, meta).then((v)=>{

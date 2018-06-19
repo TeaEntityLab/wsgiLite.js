@@ -74,6 +74,12 @@ server.GET('/template', async (request, response, meta)=>{
         }); // ok
 });
 
+// Timeout
+let routeSleep10 = server.GET('/sleep10', function (request, response, meta) {
+  setTimeout(()=>response.end("OK"), 10*1000);
+});
+routeSleep10.timeout = 5000;
+
 server.listen(3333, 'localhost', function () {
   console.log('Server up');
 });
