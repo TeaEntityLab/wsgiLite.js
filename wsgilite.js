@@ -49,12 +49,12 @@ function extendMeta(meta, addition) {
 }
 function MiddlewareRequestInfosToMeta(request, response, meta) {
   var url_parts = url.parse(request.url, true);
-  var skip404 = meta.skip404;
-  extendMeta(meta, {
-    ...url_parts.query,
-    url_path: url_parts.pathname,
-  });
-  meta.skip404 = skip404;
+  actionMetaDoFnAndKeepConfigs(()=>{
+    extendMeta(meta, {
+      ...url_parts.query,
+      url_path: url_parts.pathname,
+    });
+  }, meta);
 }
 function defCheckRoutes(rules, match) {
   return function (request, response, meta) {
@@ -135,7 +135,13 @@ function defMiddlewareNoCORS(methods) {
   }
 }
 function actionMetaSkip404(meta) {
-  meta.skip404 = true;
+  meta._skip404 = true;
+  return meta;
+}
+function actionMetaDoFnAndKeepConfigs(fn, meta) {
+  let _skip404 = meta._skip404;
+  fn(meta);
+  meta._skip404 = _skip404;
   return meta;
 }
 function defMiddlewareServeFileStatic(baseDir) {
@@ -324,9 +330,10 @@ class WSGILite extends DefSubRoute {
               return;
             }
 
-            let skip404 = meta.skip404;
-            meta = Object.assign(meta, fields, files);
-            meta.skip404 = skip404;
+            actionMetaDoFnAndKeepConfigs(()=>{
+              meta = Object.assign(meta, fields, files);
+            }, meta);
+
             resolve();
           });
         });
@@ -368,13 +375,13 @@ class WSGILite extends DefSubRoute {
             yield anyPromiseResult;
           }
 
-          if (response.finished || meta.skip404) {
+          if (response.finished || meta._skip404) {
             break;
           }
         }
       }
 
-      return response.finished || meta.skip404;
+      return response.finished || meta._skip404;
     });
   }
 
