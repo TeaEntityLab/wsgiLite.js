@@ -15,7 +15,15 @@ class Template {
     self.tmpl.load = function (id) {
         var filename = `${__dirname}${sep}${self.config.baseDir}${sep}${id}${self.config.extName}`;
         // console.log('Loading ' + filename);
-        return fs.readFileSync(filename, 'utf8');
+
+        var result;
+        try {
+          result = fs.readFileSync(filename, 'utf8');
+        } catch (e) {
+          console.log(e);
+          result = `Error: Loading Template ${id}${self.config.extName} has failed.`;
+        }
+        return result;
     };
   }
 
