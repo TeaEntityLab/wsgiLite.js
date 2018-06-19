@@ -49,10 +49,12 @@ function extendMeta(meta, addition) {
 }
 function MiddlewareRequestInfosToMeta(request, response, meta) {
   var url_parts = url.parse(request.url, true);
+  var skip404 = meta.skip404;
   extendMeta(meta, {
     ...url_parts.query,
     url_path: url_parts.pathname,
   });
+  meta.skip404 = skip404;
 }
 function defCheckRoutes(rules, match) {
   return function (request, response, meta) {
@@ -218,15 +220,11 @@ class Route {
         }
       }
 
-      if (Maybe.just(result).isPresent()) {
-        self.tryReturn(response, result);
-      }
+      self.tryReturn(response, result);
     }
   }
   tryReturn(response, result) {
-    if (Maybe.just(result).isPresent()) {
-      response.end(typeof result === 'string' ? result : JSON.stringify(result));
-    }
+    response.end(typeof result === 'string' ? result : JSON.stringify(result));
   }
 }
 
@@ -320,7 +318,9 @@ class WSGILite extends DefSubRoute {
               return;
             }
 
+            let skip404 = meta.skip404;
             meta = Object.assign(meta, fields, files);
+            meta.skip404 = skip404;
             resolve();
           });
         });
@@ -362,7 +362,7 @@ class WSGILite extends DefSubRoute {
             yield anyPromiseResult;
           }
 
-          if (response.finished) {
+          if (response.finished || meta.skip404) {
             break;
           }
         }
