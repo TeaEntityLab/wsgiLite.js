@@ -228,7 +228,9 @@ class Route {
     }
   }
   tryReturn(response, result) {
-    response.end(typeof result === 'string' ? result : JSON.stringify(result));
+    if (Maybe.just(result).isPresent()) {
+      response.end(typeof result === 'string' ? result : JSON.stringify(result));
+    }
   }
 }
 
