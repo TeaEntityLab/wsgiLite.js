@@ -452,7 +452,9 @@ class WSGILite extends DefSubRoute {
     } else {
       // Workers can share any TCP connection
       // In this case it is an HTTP server
-      this._server = this.createServer().listen(...args);
+      this._server = this.createServer();
+      this._server.timeout = 0;
+      this._server.listen(...args);
       console.log(`Worker ${process.pid} started`);
     }
   }
