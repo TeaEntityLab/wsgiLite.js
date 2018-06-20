@@ -42,7 +42,7 @@ class Template {
     });
   }
   renderResponse(response, id, data) {
-    this.render(id, data).then((result)=>{
+    return this.render(id, data).then((result)=>{
       response.end(this.renderTemplate(id, data));
 
       return result;
