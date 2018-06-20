@@ -214,10 +214,11 @@ class Route {
       }
 
       if (isAsyncFunction(self.fn)) {
-        return self.fn(request, response, meta).then((v)=>{
+        Promise.resolve().then(()=>self.fn(request, response, meta)).then((v)=>{
           self.tryReturn(response, v);
           return;
         });
+        return;
       }
 
       var result = self.fn(request, response, extendMeta(meta, matchesAndParam));
@@ -225,10 +226,11 @@ class Route {
         result = MonadIO.generatorToPromise(()=>result);
 
         if (isThenable(result)) {
-          return result.then((v)=>{
+          Promise.resolve().then(()=>result).then((v)=>{
             self.tryReturn(response, v);
             return;
           });
+          return;
         }
       }
 
@@ -361,9 +363,10 @@ class WSGILite extends DefSubRoute {
         for (var i = 0; i < self.routes.length; i++) {
           let route = self.routes[i]
           var anyPromiseResult = route.matches(request, response, meta);
-          if (anyPromiseResult) {
-            yield anyPromiseResult;
-          }
+          // NOTE Dont wait for result if matched
+          // if (anyPromiseResult) {
+          //   yield anyPromiseResult;
+          // }
 
           if (response.finished || meta._skip404) {
             break;
@@ -454,9 +457,9 @@ class WSGILite extends DefSubRoute {
     }
   }
 
-  get server() {
-    return this._server;
-  }
+  // get server() {
+  //   return this._server;
+  // }
 }
 
 module.exports = {

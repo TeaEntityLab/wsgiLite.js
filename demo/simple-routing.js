@@ -75,8 +75,11 @@ server.GET('/template', async (request, response, meta)=>{
 });
 
 // Timeout
-let routeSleep10 = server.GET('/sleep10', function (request, response, meta) {
-  setTimeout(()=>response.end("OK"), 10*1000);
+let routeSleep10 = server.GET('/sleep10', async function (request, response, meta) {
+  // setTimeout(()=>response.end("OK"), 10*1000);
+  var ts = Date.now();
+  var handle = ()=> (Date.now() - ts < 10*1000 ? Promise.resolve().then(handle) : 'ok')
+  Promise.resolve().then(handle);
 });
 routeSleep10.timeout = 5000;
 
