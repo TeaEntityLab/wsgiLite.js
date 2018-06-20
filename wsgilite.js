@@ -288,6 +288,7 @@ class DefSubRoute {
   }
 }
 
+const MSG_WSGILITE_TERMINATE = 'MSG_WSGILITE_TERMINATE';
 class WSGILite extends DefSubRoute {
   constructor(config) {
     super(null, '');
@@ -306,6 +307,8 @@ class WSGILite extends DefSubRoute {
       defMiddlewareGenerateCsrf(this),
     ];
     this.routes = [];
+    this.processes = [];
+    this.isDying = false;
   }
 
   enterMiddlewares(request, response) {
@@ -441,13 +444,26 @@ class WSGILite extends DefSubRoute {
 
   listen(...args) {
     if (cluster.isMaster) {
+      this.isDying = false;
+
       console.log(`Master ${process.pid} is running`);
       // Fork workers.
       for (let i = 0; i < this.config.processNum; i++) {
-        cluster.fork();
+        var p = cluster.fork();
+        p.on('message', (msg) => {
+          console.log(msg);
+          if (msg === MSG_WSGILITE_TERMINATE) {
+            this.terminate();
+          }
+        })
+        this.processes.push(p);
       }
       cluster.on('exit', (worker, code, signal) => {
         console.log(`worker ${worker.process.pid} died`);
+        if (!this.isDying) {
+          this.processes.push(cluster.fork());
+          return;
+        }
       });
     } else {
       // Workers can share any TCP connection
@@ -456,6 +472,17 @@ class WSGILite extends DefSubRoute {
       this._server.timeout = 0;
       this._server.listen(...args);
       console.log(`Worker ${process.pid} started`);
+    }
+  }
+  terminate() {
+    if (cluster.isMaster) {
+      this.isDying = true;
+      this.processes.forEach((p)=>p.kill());
+      while (this.processes.length > 0) {
+          this.processes.pop();
+      }
+    } else {
+      process.send(MSG_WSGILITE_TERMINATE);
     }
   }
 
