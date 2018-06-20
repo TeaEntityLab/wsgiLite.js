@@ -27,9 +27,34 @@ class Template {
     };
   }
 
-  render(id, data) {
+  renderTemplate(id, data) {
     data = data ? data : {};
     return this.tmpl(id, data);
+  }
+  render(id, data) {
+    return new Promise((resolve, reject)=>{
+      try {
+        var result = this.renderTemplate(id, data);
+        resolve(result);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+  renderResponse(response, id, data) {
+    this.render(id, data).then((result)=>{
+      response.end(this.renderTemplate(id, data));
+
+      return result;
+    }).catch((e)=>{
+      response.statusCode = 500;
+      response.write(`Error: Loading Template ${id}${this.config.extName} has failed.\n`);
+      response.write(e.toString());
+      response.end();
+
+      // return Promise.reject(e);
+      return e;
+    });
   }
 }
 

@@ -85,7 +85,7 @@ server.defSubRoute('test', function (defSub) {
   });
 });
 server.GET('/template', async (request, response, meta)=>{
-  return template.render("features", {
+  template.renderResponse(response, "features", {
             "title": "JavaScript Templates",
             "url": "https://github.com/blueimp/JavaScript-Templates",
             "features": [
