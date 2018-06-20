@@ -3,6 +3,8 @@ const path = require('path');
 const sep = path.sep;
 
 const fs = require('fs');
+const cluster = require('cluster');
+const numCPUs = require('os').cpus().length;
 
 const http = require('http');
 
@@ -290,6 +292,7 @@ class WSGILite extends DefSubRoute {
     this.config = config ? config : {};
     this.config.csrfMaxAge = this.config.csrfMaxAge ? this.config.csrfMaxAge : 2*1000*60*60;
     this.config.enableFormParsing = this.config.enableFormParsing ? this.config.enableFormParsing : true;
+    this.config.processNum = this.config.processNum ? this.config.processNum : numCPUs;
     this.tokens = new Tokens();
     // this.secret = this.config.secret ? this.config.secret : this.tokens.secretSync();
     if (!this.config.secret) {
@@ -301,19 +304,6 @@ class WSGILite extends DefSubRoute {
       defMiddlewareGenerateCsrf(this),
     ];
     this.routes = [];
-
-    const self = this;
-    self._server = http.createServer((request, response) => {
-
-      Promise.resolve(0).then(()=>self.enterMiddlewares(request, response)).then((finished) => {
-        if (!finished) {
-          response.statusCode = 404;
-          response.setHeader('Content-Type', 'text/plain');
-          response.end('404 File not found.');
-        }
-      });
-
-    });
   }
 
   enterMiddlewares(request, response) {
@@ -431,8 +421,37 @@ class WSGILite extends DefSubRoute {
     DefSubRoute.prototype.defSubRoute.call(this, rule, defFn);
   }
 
+  createServer() {
+    const self = this;
+    return http.createServer((request, response) => {
+
+      Promise.resolve(0).then(()=>self.enterMiddlewares(request, response)).then((finished) => {
+        if (!finished) {
+          response.statusCode = 404;
+          response.setHeader('Content-Type', 'text/plain');
+          response.end('404 File not found.');
+        }
+      });
+
+    });
+  }
+
   listen(...args) {
-    return this.server.listen(...args);
+    if (cluster.isMaster) {
+      console.log(`Master ${process.pid} is running`);
+      // Fork workers.
+      for (let i = 0; i < this.config.processNum; i++) {
+        cluster.fork();
+      }
+      cluster.on('exit', (worker, code, signal) => {
+        console.log(`worker ${worker.process.pid} died`);
+      });
+    } else {
+      // Workers can share any TCP connection
+      // In this case it is an HTTP server
+      this._server = this.createServer().listen(...args);
+      console.log(`Worker ${process.pid} started`);
+    }
   }
 
   get server() {
