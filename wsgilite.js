@@ -209,7 +209,10 @@ class Route {
           response.statusCode = 504;
           response.end(self.timeoutMessage);
 
-          console.log(`Execution Timeout: '${self.rule}' -> ${self.timeout}ms`)
+          console.log(`Execution Timeout: '${self.rule}' -> ${self.timeout}ms`);
+
+          // NOTE This is for cluster worker exiting
+          process.exit(0);
         }, self.timeout);
       }
 
