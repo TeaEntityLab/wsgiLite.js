@@ -37,7 +37,7 @@ class Template {
         var result = this.renderTemplate(id, data);
         resolve(result);
       } catch (e) {
-        reject(e);
+        reject(new Error(`Error: Loading Template ${id}${this.config.extName} has failed.\n` + e.toString()));
       }
     });
   }
@@ -48,7 +48,6 @@ class Template {
       return result;
     }).catch((e)=>{
       response.statusCode = 500;
-      response.write(`Error: Loading Template ${id}${this.config.extName} has failed.\n`);
       response.write(e.toString());
       response.end();
 

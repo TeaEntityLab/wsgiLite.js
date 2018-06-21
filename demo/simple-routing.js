@@ -14,6 +14,8 @@ const server = new WSGILite({
   secret: 'abcdefg',
   logProcessMessage: true,
   debug: true,
+
+  workerServeTimesToRestart: 500, // Each child worker will auto-restart after serving 500 requests
 });
 const template = new Template({
   baseDir: "demo/template",
@@ -35,7 +37,7 @@ server.addMiddleware(defHeaderCsrfCheckRoutes([
   '/upload2',
 ], server));
 server.GET('/', (request, response, meta)=>{
-  response.end(JSON.stringify(meta)); // {"url_path":"/","msg3":"I got it3","msg2":"I got it2","msg":"I got it"}
+  return JSON.stringify(meta); // {"url_path":"/","msg3":"I got it3","msg2":"I got it2","msg":"I got it"}
 });
 server.GET('/terminate', (request, response, meta)=>{
   response.end("terminate");
@@ -69,7 +71,7 @@ server.defSubRoute('test', function (defSub) {
   });
 });
 server.GET('/template', async (request, response, meta)=>{
-  template.renderResponse(response, "features", {
+  return template.render("features", {
             "title": "JavaScript Templates",
             "url": "https://github.com/blueimp/JavaScript-Templates",
             "features": [
@@ -77,14 +79,18 @@ server.GET('/template', async (request, response, meta)=>{
                 "powerful",
                 "zero dependencies"
             ]
-        }); // ok
+        }).catch((e)=>{
+          response.statusCode = 500;
+          return e.toString();
+        })
+        ; // ok
 });
 
 // Timeout
 let routeTimeout = server.GET('/timeout', async function (request, response, meta) {
   var rp = require('request-promise-native');
   await rp.get('https://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_30mb.mp4');
-  response.end('ok');
+  return "ok";
 });
 routeTimeout.timeout = 5000;
 

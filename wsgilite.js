@@ -243,6 +243,14 @@ class Route {
   tryReturn(response, result) {
     if (Maybe.just(result).isPresent()) {
       response.end(typeof result === 'string' ? result : JSON.stringify(result));
+
+      if (this.wsgilite.config.workerServeTimesToRestart > 0) {
+        this.wsgilite.serveTimes ++;
+        if (this.wsgilite.serveTimes >= this.wsgilite.config.workerServeTimesToRestart && cluster.isWorker) {
+          // NOTE The cluster worker will auto-restart to avoid memory leaks.
+          process.exit(0);
+        }
+      }
     }
   }
 }
@@ -302,6 +310,7 @@ class WSGILite extends DefSubRoute {
 
     this.config.processNum = Maybe.just(this.config.processNum).isPresent() ? this.config.processNum : numCPUs;
     this.config.softExitWorker = Maybe.just(this.config.softExitWorker).isPresent() ? this.config.softExitWorker : true;
+    this.config.workerServeTimesToRestart = Maybe.just(this.config.workerServeTimesToRestart).isPresent() ? this.config.workerServeTimesToRestart : 0;
     this.config.logProcessMessage = Maybe.just(this.config.logProcessMessage).isPresent() ? this.config.logProcessMessage : false;
 
     this.config.debug = Maybe.just(this.config.debug).isPresent() ? this.config.debug : false;
@@ -319,6 +328,7 @@ class WSGILite extends DefSubRoute {
     this.routes = [];
     this.workers = [];
     this.isDying = false;
+    this.serveTimes = 0;
   }
 
   enterMiddlewares(request, response) {
