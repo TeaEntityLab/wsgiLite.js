@@ -33,7 +33,7 @@ const server = new WSGILite({
   logProcessMessage: true,
   debug: true,
 
-  workerServeTimesToRestart: 500, // Each child worker will auto-restart after serving 500 requests
+  workerServeTimesToRestart: 500, // Each child worker will auto-restart after it served 500 requests
 });
 const template = new Template({
   baseDir: "demo/template",
