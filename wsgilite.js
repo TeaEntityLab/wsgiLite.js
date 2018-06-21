@@ -291,14 +291,21 @@ class DefSubRoute {
   }
 }
 
-const MSG_WSGILITE_TERMINATE = 'MSG_WSGILITE_TERMINATE';
+const MSG_WSGILITE_TERMINATE_MASTER = 'MSG_WSGILITE_TERMINATE_MASTER';
+const MSG_WSGILITE_TERMINATE_WORKER = 'MSG_WSGILITE_TERMINATE_WORKER';
 class WSGILite extends DefSubRoute {
   constructor(config) {
     super(null, '');
     this.config = config ? config : {};
-    this.config.csrfMaxAge = this.config.csrfMaxAge ? this.config.csrfMaxAge : 2*1000*60*60;
-    this.config.enableFormParsing = this.config.enableFormParsing ? this.config.enableFormParsing : true;
-    this.config.processNum = this.config.processNum ? this.config.processNum : numCPUs;
+    this.config.csrfMaxAge = Maybe.just(this.config.csrfMaxAge).isPresent() ? this.config.csrfMaxAge : 2*1000*60*60;
+    this.config.enableFormParsing = Maybe.just(this.config.enableFormParsing).isPresent() ? this.config.enableFormParsing : true;
+
+    this.config.processNum = Maybe.just(this.config.processNum).isPresent() ? this.config.processNum : numCPUs;
+    this.config.softExitWorker = Maybe.just(this.config.softExitWorker).isPresent() ? this.config.softExitWorker : true;
+    this.config.logProcessMessage = Maybe.just(this.config.logProcessMessage).isPresent() ? this.config.logProcessMessage : false;
+
+    this.config.debug = Maybe.just(this.config.debug).isPresent() ? this.config.debug : false;
+
     this.tokens = new Tokens();
     // this.secret = this.config.secret ? this.config.secret : this.tokens.secretSync();
     if (!this.config.secret) {
@@ -310,7 +317,7 @@ class WSGILite extends DefSubRoute {
       defMiddlewareGenerateCsrf(this),
     ];
     this.routes = [];
-    this.processes = [];
+    this.workers = [];
     this.isDying = false;
   }
 
@@ -449,43 +456,55 @@ class WSGILite extends DefSubRoute {
     if (cluster.isMaster) {
       this.isDying = false;
 
-      console.log(`Master ${process.pid} is running`);
+      if (this.config.logProcessMessage || this.config.debug) {console.log(`Master ${process.pid} is running`);}
       // Fork workers.
       for (let i = 0; i < this.config.processNum; i++) {
-        var p = cluster.fork();
-        p.on('message', (msg) => {
-          console.log(msg);
-          if (msg === MSG_WSGILITE_TERMINATE) {
+        var worker = cluster.fork();
+        worker.on('message', (msg) => {
+          if (this.config.logProcessMessage || this.config.debug) {console.log(msg);}
+          if (msg === MSG_WSGILITE_TERMINATE_MASTER) {
             this.terminate();
           }
         })
-        this.processes.push(p);
+        this.workers.push(worker);
       }
       cluster.on('exit', (worker, code, signal) => {
-        console.log(`worker ${worker.process.pid} died`);
+        if (this.config.logProcessMessage || this.config.debug) {console.log(`worker ${worker.process.pid} died`);}
         if (!this.isDying) {
-          this.processes.push(cluster.fork());
+          this.workers.push(cluster.fork());
           return;
         }
       });
     } else {
+      process.on('message', (msg) => {
+        if (this.config.logProcessMessage || this.config.debug) {console.log(msg);}
+        if (msg == MSG_WSGILITE_TERMINATE_WORKER) {
+          process.exit(0);
+        }
+      });
       // Workers can share any TCP connection
       // In this case it is an HTTP server
       this._server = this.createServer();
       this._server.timeout = 0;
       this._server.listen(...args);
-      console.log(`Worker ${process.pid} started`);
+      if (this.config.logProcessMessage || this.config.debug) {console.log(`Worker ${process.pid} started`);}
     }
   }
   terminate() {
     if (cluster.isMaster) {
       this.isDying = true;
-      this.processes.forEach((p)=>p.kill());
-      while (this.processes.length > 0) {
-          this.processes.pop();
+      this.workers.forEach((worker) => {
+        if (this.config.softExitWorker) {
+          worker.send(MSG_WSGILITE_TERMINATE_WORKER);
+        } else {
+          worker.kill();
+        }
+      });
+      while (this.workers.length > 0) {
+          this.workers.pop();
       }
     } else {
-      process.send(MSG_WSGILITE_TERMINATE);
+      process.send(MSG_WSGILITE_TERMINATE_MASTER);
     }
   }
 

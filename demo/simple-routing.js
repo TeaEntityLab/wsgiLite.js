@@ -12,6 +12,8 @@ const {
 
 const server = new WSGILite({
   secret: 'abcdefg',
+  logProcessMessage: true,
+  debug: true,
 });
 const template = new Template({
   baseDir: "demo/template",
@@ -36,8 +38,8 @@ server.GET('/', (request, response, meta)=>{
   response.end(JSON.stringify(meta)); // {"url_path":"/","msg3":"I got it3","msg2":"I got it2","msg":"I got it"}
 });
 server.GET('/terminate', (request, response, meta)=>{
+  response.end("terminate");
   server.terminate();
-  return "";
 });
 server.GET('/user/:id', function *(request, response, meta) {
   return yield Promise.resolve(meta); // {"url_path":"/user/theID","msg3":"I got it3","msg2":"I got it2","msg":"I got it","id":"theID"}
