@@ -97,13 +97,12 @@ server.GET('/template', async (request, response, meta)=>{
 });
 
 // Timeout
-let routeSleep10 = server.GET('/sleep10', async function (request, response, meta) {
-  setTimeout(()=>response.end("OK"), 10*1000);
-  // var ts = Date.now();
-  // var handle = ()=> (Date.now() - ts < 10*1000 ? Promise.resolve().then(handle) : 'ok')
-  // Promise.resolve().then(handle);
+let routeTimeout = server.GET('/timeout', async function (request, response, meta) {
+  var rp = require('request-promise-native');
+  await rp.get('https://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_30mb.mp4');
+  response.end('ok');
 });
-routeSleep10.timeout = 5000;
+routeTimeout.timeout = 5000;
 
 server.listen(3333, 'localhost', function () {
   console.log('Server up');

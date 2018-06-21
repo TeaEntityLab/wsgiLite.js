@@ -24,5 +24,8 @@
     "formidable": "^1.2.1",
     "fpes": "^1.0.42",
     "route-parser": "0.0.5"
+  },
+  "devDependencies": {
+    "request-promise-native": "^1.0.5"
   }
 }
