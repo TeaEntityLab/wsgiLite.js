@@ -13,7 +13,7 @@ class Template {
 
     self.tmpl = require('blueimp-tmpl');
     self.tmpl.load = function (id) {
-        var filename = `${__dirname}${sep}${self.config.baseDir}${sep}${id}${self.config.extName}`;
+        var filename = `${process.cwd()}${sep}${self.config.baseDir}${sep}${id}${self.config.extName}`;
         // console.log('Loading ' + filename);
 
         var result;
