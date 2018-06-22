@@ -1,6 +1,4 @@
 const url = require('url');
-const path = require('path');
-const sep = path.sep;
 
 const fs = require('fs');
 const cluster = require('cluster');
@@ -11,44 +9,35 @@ const http = require('http');
 const RouteParser = require('route-parser');
 const formidable = require('formidable')
 
-const Cookies = require( "cookies" );
 const Tokens = require('csrf')
 
 const MonadIO = require('fpEs/monadio');
 const Maybe = require('fpEs/maybe');
 
-const AsyncFunction = (async () => {}).constructor;
-const GeneratorFunction = (function* () {}).constructor;
-function isAsyncFunction(fn) {
-  // return fn instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction === true;
-  return fn instanceof AsyncFunction;
-}
-function isNextable(obj) {
-  return obj && typeof obj.next === 'function';
-}
-function isThenable(obj) {
-  return obj && typeof obj.then === 'function';
-}
+const {
+  isAsyncFunction,
+  isNextable,
+  isThenable,
 
-// maps file extention to MIME typere
-const mimeMap = {
-  '.ico': 'image/x-icon',
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.json': 'application/json',
-  '.css': 'text/css',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.wav': 'audio/wav',
-  '.mp3': 'audio/mpeg',
-  '.svg': 'image/svg+xml',
-  '.pdf': 'application/pdf',
-  '.doc': 'application/msword'
-};
+  extendMeta,
+  actionMetaSkip404,
+  actionMetaDoFnAndKeepConfigs,
+} = require('./common');
 
-function extendMeta(meta, addition) {
-  return Object.assign(meta, addition);
-}
+const {
+  defMiddlewareGenerateCsrf,
+  defHeaderCsrfCheckRoutes,
+  defFormCsrfCheckRoutes,
+
+  getCSRF_token,
+  generateCSRFFormInput,
+} = require('./csrf');
+
+const {
+  mimeMap,
+  defMiddlewareServeFileStatic,
+} = require('./file');
+
 function MiddlewareRequestInfosToMeta(request, response, meta) {
   var url_parts = url.parse(request.url, true);
   actionMetaDoFnAndKeepConfigs(()=>{
@@ -58,67 +47,7 @@ function MiddlewareRequestInfosToMeta(request, response, meta) {
     });
   }, meta);
 }
-function defCheckRoutes(rules, match) {
-  return function (request, response, meta) {
-    var result = rules.filter((rule)=>(new RouteParser(rule)).match(url.parse(request.url).pathname));
-    if ((!result) || result.length <= 0) {
-      // Not target
-      return;
-    }
 
-    match(request, response, meta);
-  }
-}
-function getCSRF_token(request, response) {
-  var cookies = new Cookies(request, response);
-  var CSRF_token = cookies.get('CSRF_token');
-  return CSRF_token;
-}
-function generateCSRFFormInput(request, response) {
-  return `<input type="hidden" name="CSRF_token" id="csrf-token" value="${getCSRF_token(request, response)}" />`;
-}
-function defMiddlewareGenerateCsrf(wsgilite) {
-  if (!wsgilite) {throw new Error('wsgilite is not given')}
-
-  return function (request, response, meta) {
-    var CSRF_token = getCSRF_token(request, response);
-    if ((!CSRF_token) || (!wsgilite.tokens.verify(wsgilite.secret, CSRF_token))) {
-
-      var token = wsgilite.tokens.create(wsgilite.secret);
-
-      var cookies = new Cookies(request, response);
-      cookies.set('CSRF_token', token, {
-        maxAge: wsgilite.config.csrfMaxAge,
-      });
-    }
-  }
-}
-function defFormCsrfCheckRoutes(rules, wsgilite) {
-  if (!wsgilite) {throw new Error('wsgilite is not given')}
-
-  return defCheckRoutes(rules, function (request, response, meta) {
-    var CSRF_token = getCSRF_token(request, response);
-
-    if (CSRF_token != meta.CSRF_token || (!wsgilite.tokens.verify(wsgilite.secret, CSRF_token))) {
-      response.statusCode = 403;
-      response.setHeader('Content-Type', 'text/plain');
-      response.end('CSRF detected.');
-    }
-  });
-}
-function defHeaderCsrfCheckRoutes(rules, wsgilite) {
-  if (!wsgilite) {throw new Error('wsgilite is not given')}
-
-  return defCheckRoutes(rules, function (request, response, meta) {
-    var CSRF_token = request.headers['x-csrf-token'];
-
-    if ((CSRF_token != meta.CSRF_token) || (!wsgilite.tokens.verify(wsgilite.secret, CSRF_token))) {
-      response.statusCode = 403;
-      response.setHeader('Content-Type', 'text/plain');
-      response.end('CSRF detected.');
-    }
-  });
-}
 function defMiddlewareNoCORS(methods) {
   methods = methods ? methods : ['GET','POST','OPTIONS','PUT','PATCH','DELETE'];
   return function (request, response, meta) {
@@ -136,51 +65,8 @@ function defMiddlewareNoCORS(methods) {
     response.setHeader('Access-Control-Allow-Credentials', true);
   }
 }
-function actionMetaSkip404(meta) {
-  meta._skip404 = true;
-  return meta;
-}
-function actionMetaDoFnAndKeepConfigs(fn, meta) {
-  let _skip404 = meta._skip404;
-  fn(meta);
-  meta._skip404 = _skip404;
-  return meta;
-}
-function defMiddlewareServeFileStatic(baseDir) {
-  baseDir = baseDir ? baseDir : '.';
 
-  return function (request, response, meta) {
-    const pathname = meta.relativePath ? meta.relativePath : meta.url_path;
-    const ext = path.parse(pathname).ext;
-    const finalPath = `${__dirname}${sep}${baseDir}${sep}${pathname}`;
 
-    var exist = fs.existsSync(finalPath);
-    if(!exist) {
-      return;
-    }
-    actionMetaSkip404(meta);
-
-    response.writeHead(200, {
-      'Transfer-Encoding': 'chunked',
-      'Content-type': mimeMap[ext] || 'text/plain',
-      'X-Content-Type-Options': 'nosniff',
-    });
-    // read file from file
-
-    var stream = fs.createReadStream(finalPath);
-
-    stream.on('data', (chunk) => {
-      response.write(chunk);
-    });
-    stream.on('error', function(err){
-      response.statusCode = 500;
-      response.end(`Error getting the file: ${err}.`);
-    });
-    stream.on('end', () => {
-      response.end();
-    });
-  }
-}
 
 class Route {
   constructor(wsgilite, rule, fn) {
@@ -534,6 +420,7 @@ module.exports = {
 
   defMiddlewareNoCORS,
   defMiddlewareServeFileStatic,
+  defMiddlewareGenerateCsrf,
   defHeaderCsrfCheckRoutes,
   defFormCsrfCheckRoutes,
 
