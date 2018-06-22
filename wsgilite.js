@@ -411,15 +411,5 @@ module.exports = {
   WSGILite,
 
   MiddlewareRequestInfosToMeta,
-
-  extendMeta,
-  actionMetaSkip404,
-
   defMiddlewareNoCORS,
-  defMiddlewareGenerateCsrf,
-  defHeaderCsrfCheckRoutes,
-  defFormCsrfCheckRoutes,
-
-  getCSRF_token,
-  generateCSRFFormInput,
 };

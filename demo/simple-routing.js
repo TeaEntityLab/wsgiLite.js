@@ -1,9 +1,5 @@
 const {
   WSGILite,
-  defFormCsrfCheckRoutes,
-  defHeaderCsrfCheckRoutes,
-  getCSRF_token,
-  generateCSRFFormInput,
 } = require('../wsgilite');
 const {
   Template,
@@ -12,6 +8,12 @@ const {
   mimeMap,
   defMiddlewareServeFileStatic,
 } = require('../file');
+const {
+  defFormCsrfCheckRoutes,
+  defHeaderCsrfCheckRoutes,
+  getCSRF_token,
+  generateCSRFFormInput,
+} = require('../csrf');
 
 const server = new WSGILite({
   secret: 'abcdefg',
