@@ -94,11 +94,15 @@ server.GET('/template', async (request, response, meta)=>{
             ]
         }).catch((e)=>{
           response.statusCode = 500;
-          return e.toString();
+          return e.stack;
         })
         ; // ok
 });
 
+// Exception
+server.GET('/exception', async function (request, response, meta) {
+  throw new Error("There's an exception"); // Error: There's an exception
+});
 // Timeout
 let routeTimeout = server.GET('/timeout', async function (request, response, meta) {
   var rp = require('request-promise-native');

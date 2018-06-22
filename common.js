@@ -41,6 +41,16 @@ module.exports = {
       }
     };
   },
+  MiddlewareDefaultCatchException: function (request, response, meta) {
+    return (e, debug) => {
+      response.statusCode = 500;
+      response.setHeader('Content-Type', 'text/plain');
+      response.write('500 Internal Server Error\n');
+      response.end(debug && e ? e.stack : '');
+
+      console.log(e);
+    };
+  },
 
   isAsyncFunction: function (fn) {
     // return fn instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction === true;

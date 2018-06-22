@@ -26,6 +26,7 @@ const {
   actionMetaSkip404,
   actionMetaDoFnAndKeepConfigs,
   MiddlewareDefault404,
+  MiddlewareDefaultCatchException,
 } = require('./common');
 
 const {
@@ -77,6 +78,8 @@ class Route {
     this.timeoutMessage = '504 Gateway Timeout';
 
     this.routeParser = new RouteParser(this.rule);
+
+    this.middlewareCatchException = MiddlewareDefaultCatchException;
   }
 
   matches(request, response, meta) {
@@ -101,20 +104,28 @@ class Route {
         }, self.timeout);
       }
 
+      var errorHandler = (e)=>this.middlewareCatchException(request, response, meta)(e, this.wsgilite.config.debug);
+
       if (isAsyncFunction(self.fn)) {
-        Promise.resolve().then(()=>self.fn(request, response, meta)).then((v)=>{
+        Promise.resolve().then(()=>self.fn(request, response, meta)).catch(errorHandler).then((v)=>{
           self.tryReturn(response, v);
           return;
         });
         return;
       }
 
-      var result = self.fn(request, response, extendMeta(meta, matchesAndParam));
+      var result;
+      try {
+        result = self.fn(request, response, extendMeta(meta, matchesAndParam));
+      } catch (e) {
+        errorHandler(e);
+      }
+
       if (isNextable(result)) {
         result = MonadIO.generatorToPromise(()=>result);
 
         if (isThenable(result)) {
-          Promise.resolve().then(()=>result).then((v)=>{
+          Promise.resolve().then(()=>result).catch(errorHandler).then((v)=>{
             self.tryReturn(response, v);
             return;
           });
