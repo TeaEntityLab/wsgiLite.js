@@ -86,6 +86,12 @@ server.POST('/upload2', (request, response, meta)=>{
 server.GET('/heartbeat', async (request, response, meta)=>{
   return "ok"; // ok
 });
+server.GET('/heartbeat2', async (request, response, meta)=>{
+  server.redirect('/heartbeat')(request, response, meta); // ok
+});
+server.GET('/heartbeat3', async (request, response, meta)=>{
+  server.redirect('/heartbeat999')(request, response, meta); // 404 File not found.
+});
 server.defSubRoute('test', function (defSub) {
   defSub.defSubRoute('change', function (defSub) {
     defSub.defSubRoute('for', function (defSub) {

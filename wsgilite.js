@@ -13,6 +13,9 @@ const Tokens = require('csrf')
 
 const MonadIO = require('fpEs/monadio');
 const Maybe = require('fpEs/maybe');
+const {
+  clone,
+} = require('fpEs/fp');
 
 const {
   isAsyncFunction,
@@ -215,10 +218,23 @@ class WSGILite extends DefSubRoute {
     this.serveTimes = 0;
   }
 
-  doRouting(request, response, meta) {
-    return Promise.resolve(0).then(()=>this.enterMiddlewares(request, response, meta)).then(this.config.middleware404(request, response, meta));
+  redirect(path) {
+    return (request, response, meta)=>{
+      // Brand new one
+      meta = clone(meta);
+
+      // New Path
+      meta._url_path = path;
+      // Possibly 404
+      actionMetaSkip404(meta, true);
+      // Do routing again!!
+      this.enterMiddlewares(request, response, meta).then(this.config.middleware404(request, response, meta));
+    };
   }
-  enterMiddlewares(request, response, meta) {
+  doRouting(request, response, meta) {
+    return Promise.resolve(0).then(()=>this.preprocessAndEnterMiddlewares(request, response, meta)).then(this.config.middleware404(request, response, meta));
+  }
+  preprocessAndEnterMiddlewares(request, response, meta) {
     const self = this;
     return MonadIO.generatorToPromise(function *() {
 
@@ -248,6 +264,12 @@ class WSGILite extends DefSubRoute {
         }
       }
 
+      return yield self.enterMiddlewares(request, response, meta);
+    });
+  }
+  enterMiddlewares(request, response, meta) {
+    const self = this;
+    return MonadIO.generatorToPromise(function *() {
       for (var i = 0; i < self.middlewares.length; i++) {
         var middleware = self.middlewares[i];
         if (response.finished) {
