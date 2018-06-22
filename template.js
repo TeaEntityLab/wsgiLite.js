@@ -55,6 +55,10 @@ class Template {
       return e;
     });
   }
+
+  renderAsFunction() {
+    return (id, data) => this.render(id, data);
+  }
 }
 
 module.exports = {

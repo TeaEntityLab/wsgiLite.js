@@ -22,9 +22,11 @@ const server = new WSGILite({
 
   workerServeTimesToRestart: 500, // Each child worker will auto-restart after it served 500 requests
 });
+const redirect = server.redirectAsFunction();
 const template = new Template({
   baseDir: "demo/template",
 });
+const render = template.renderAsFunction();
 
 server.addMiddleware(async (request, response, meta)=>{
   meta.msg3 = 'I got it3';
@@ -67,10 +69,10 @@ server.GET('/heartbeat', async (request, response, meta)=>{
   return "ok"; // ok
 });
 server.GET('/heartbeat2', async (request, response, meta)=>{
-  server.redirect('/heartbeat')(request, response, meta); // ok
+  redirect('/heartbeat')(request, response, meta); // ok
 });
 server.GET('/heartbeat3', async (request, response, meta)=>{
-  server.redirect('/heartbeat999')(request, response, meta); // 404 File not found.
+  redirect('/heartbeat999')(request, response, meta); // 404 File not found.
 });
 server.defSubRoute('test', function (defSub) {
   defSub.defSubRoute('change', function (defSub) {
@@ -82,7 +84,7 @@ server.defSubRoute('test', function (defSub) {
   });
 });
 server.GET('/template', async (request, response, meta)=>{
-  return template.render("features", {
+  return render("features", {
             "title": "JavaScript Templates",
             "url": "https://github.com/blueimp/JavaScript-Templates",
             "features": [

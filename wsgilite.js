@@ -231,6 +231,9 @@ class WSGILite extends DefSubRoute {
       this.enterMiddlewares(request, response, meta).then(this.config.middleware404(request, response, meta));
     };
   }
+  redirectAsFunction() {
+    return (path) => this.redirect(path);
+  }
   doRouting(request, response, meta) {
     return Promise.resolve(0).then(()=>this.preprocessAndEnterMiddlewares(request, response, meta)).then(this.config.middleware404(request, response, meta));
   }
