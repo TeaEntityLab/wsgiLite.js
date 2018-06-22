@@ -119,6 +119,7 @@ class Route {
         result = self.fn(request, response, extendMeta(meta, matchesAndParam));
       } catch (e) {
         errorHandler(e);
+        return;
       }
 
       if (isNextable(result)) {
@@ -212,6 +213,7 @@ class WSGILite extends DefSubRoute {
     this.config.debug = Maybe.just(this.config.debug).isPresent() ? this.config.debug : false;
 
     this.config.middleware404 = Maybe.just(this.config.middleware404).isPresent() ? this.config.middleware404 : MiddlewareDefault404;
+    this.config.middlewareCatchException = Maybe.just(this.config.middlewareCatchException).isPresent() ? this.config.middlewareCatchException : MiddlewareDefaultCatchException;
 
     this.tokens = new Tokens();
     // this.secret = this.config.secret ? this.config.secret : this.tokens.secretSync();
@@ -290,15 +292,23 @@ class WSGILite extends DefSubRoute {
           break;
         }
 
-        var anyPromiseResult = middleware(request, response, meta);
+        var errorHandler = (e)=>self.config.middlewareCatchException(request, response, meta)(e, self.config.debug);
+        var anyPromiseResult = undefined;
+        try {
+          anyPromiseResult = middleware(request, response, meta);
+        } catch (e) {
+          errorHandler(e);
+          return;
+        }
+
         if (anyPromiseResult) {
           if (isAsyncFunction(middleware)) {
-            anyPromiseResult = yield anyPromiseResult;
+            anyPromiseResult = yield anyPromiseResult.catch(errorHandler);
           } else if (isNextable(anyPromiseResult)) {
-            anyPromiseResult = MonadIO.generatorToPromise(()=>anyPromiseResult);
+            anyPromiseResult = MonadIO.generatorToPromise(()=>anyPromiseResult).catch(errorHandler);
           }
           if (isThenable(anyPromiseResult)) {
-            yield anyPromiseResult;
+            yield anyPromiseResult.catch(errorHandler);
           }
         }
       }
