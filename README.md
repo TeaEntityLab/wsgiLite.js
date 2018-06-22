@@ -24,12 +24,14 @@ const {
   defHeaderCsrfCheckRoutes,
   getCSRF_token,
   generateCSRFFormInput,
-
+} = require('wsgilite/wsgilite');
+const {
   Template,
-
+} = require('wsgilite/template');
+const {
   mimeMap,
   defMiddlewareServeFileStatic,
-} = require('wsgilite');
+} = require('wsgilite/file');
 
 const server = new WSGILite({
   secret: 'abcdefg',

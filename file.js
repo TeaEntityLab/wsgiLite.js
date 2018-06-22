@@ -31,10 +31,11 @@ module.exports = {
     return function (request, response, meta) {
       const pathname = meta.relativePath ? meta.relativePath : meta.url_path;
       const ext = path.parse(pathname).ext;
-      const finalPath = `${__dirname}${sep}${baseDir}${sep}${pathname}`;
+      const finalPath = `${process.cwd()}${sep}${baseDir}${sep}${pathname}`;
 
       var exist = fs.existsSync(finalPath);
       if(!exist) {
+        actionMetaSkip404(meta, true);
         return;
       }
       actionMetaSkip404(meta);

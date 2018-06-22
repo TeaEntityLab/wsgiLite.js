@@ -20,8 +20,8 @@ module.exports = {
   extendMeta: function (meta, addition) {
     return Object.assign(meta, addition);
   },
-  actionMetaSkip404: function (meta) {
-    meta._skip404 = true;
+  actionMetaSkip404: function (meta, reverse) {
+    meta._skip404 = !reverse ? true : false;
     return meta;
   },
   actionMetaDoFnAndKeepConfigs: function (fn, meta) {
