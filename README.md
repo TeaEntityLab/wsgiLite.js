@@ -20,12 +20,15 @@ npm i wsgilite
 ```javascript
 const {
   WSGILite,
-  defMiddlewareServeFileStatic,
   defFormCsrfCheckRoutes,
   defHeaderCsrfCheckRoutes,
   getCSRF_token,
   generateCSRFFormInput,
+
   Template,
+
+  mimeMap,
+  defMiddlewareServeFileStatic,
 } = require('wsgilite');
 
 const server = new WSGILite({

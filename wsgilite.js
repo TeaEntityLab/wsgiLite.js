@@ -33,11 +33,6 @@ const {
   generateCSRFFormInput,
 } = require('./csrf');
 
-const {
-  mimeMap,
-  defMiddlewareServeFileStatic,
-} = require('./file');
-
 function MiddlewareRequestInfosToMeta(request, response, meta) {
   var url_parts = url.parse(request.url, true);
   actionMetaDoFnAndKeepConfigs(()=>{
@@ -419,7 +414,6 @@ module.exports = {
   actionMetaSkip404,
 
   defMiddlewareNoCORS,
-  defMiddlewareServeFileStatic,
   defMiddlewareGenerateCsrf,
   defHeaderCsrfCheckRoutes,
   defFormCsrfCheckRoutes,
