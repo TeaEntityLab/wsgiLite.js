@@ -7,7 +7,7 @@ const GeneratorFunction = (function* () {}).constructor;
 module.exports = {
   defCheckRoutes: function (rules, match) {
     return function (request, response, meta) {
-      var result = rules.filter((rule)=>(new RouteParser(rule)).match(url.parse(request.url).pathname));
+      var result = rules.filter((rule)=>(new RouteParser(rule)).match(meta._url_path));
       if ((!result) || result.length <= 0) {
         // Not target
         return;
@@ -26,8 +26,10 @@ module.exports = {
   },
   actionMetaDoFnAndKeepConfigs: function (fn, meta) {
     let _skip404 = meta._skip404;
+    let _url_path = meta._url_path;
     fn(meta);
     meta._skip404 = _skip404;
+    meta._url_path = _url_path ? _url_path : meta._url_path;
     return meta;
   },
 

@@ -29,7 +29,7 @@ module.exports = {
     baseDir = baseDir ? baseDir : '.';
 
     return function (request, response, meta) {
-      const pathname = meta.relativePath ? meta.relativePath : meta.url_path;
+      const pathname = meta.relativePath ? meta.relativePath : meta._url_path;
       const ext = path.parse(pathname).ext;
       const finalPath = `${process.cwd()}${sep}${baseDir}${sep}${pathname}`;
 

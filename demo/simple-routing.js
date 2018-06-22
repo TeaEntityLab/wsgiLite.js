@@ -42,14 +42,14 @@ server.addMiddleware(defHeaderCsrfCheckRoutes([
   '/upload2',
 ], server));
 server.GET('/', (request, response, meta)=>{
-  return JSON.stringify(meta); // {"url_path":"/","msg3":"I got it3","msg2":"I got it2","msg":"I got it"}
+  return JSON.stringify(meta); // {"_skip404":true,"_url_path":"/","msg3":"I got it3","msg2":"I got it2","msg":"I got it"}
 });
 server.GET('/terminate', (request, response, meta)=>{
   response.end("terminate");
   server.terminate();
 });
 server.GET('/user/:id', function *(request, response, meta) {
-  return yield Promise.resolve(meta); // {"url_path":"/user/theID","msg3":"I got it3","msg2":"I got it2","msg":"I got it","id":"theID"}
+  return yield Promise.resolve(meta); // {"_skip404":true,"_url_path":"/user/theID","msg3":"I got it3","msg2":"I got it2","msg":"I got it","id":"theID"}
 });
 server.GET('/file/*relativePath', (request, response, meta)=>{
   defMiddlewareServeFileStatic('demo')(request, response, meta);

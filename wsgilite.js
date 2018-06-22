@@ -38,7 +38,7 @@ function MiddlewareRequestInfosToMeta(request, response, meta) {
   actionMetaDoFnAndKeepConfigs(()=>{
     extendMeta(meta, {
       ...url_parts.query,
-      url_path: url_parts.pathname,
+      _url_path: url_parts.pathname,
     });
   }, meta);
 }
@@ -76,7 +76,7 @@ class Route {
   }
 
   matches(request, response, meta) {
-    var matchesAndParam = this.routeParser.match(url.parse(request.url).pathname);
+    var matchesAndParam = this.routeParser.match(meta._url_path);
     if (matchesAndParam) {
       var self = this;
 
