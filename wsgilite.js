@@ -307,6 +307,8 @@ class WSGILite extends DefSubRoute {
     var checker = function (request, response, meta) {
       if (request.method == method) {
         return fn(request, response, meta);
+      } else {
+        actionMetaSkip404(meta, true);
       }
     };
 
