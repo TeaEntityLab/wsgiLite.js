@@ -32,6 +32,15 @@ module.exports = {
     meta._url_path = _url_path ? _url_path : meta._url_path;
     return meta;
   },
+  MiddlewareDefault404: function (request, response, meta) {
+    return (finished) => {
+      if (!finished) {
+        response.statusCode = 404;
+        response.setHeader('Content-Type', 'text/plain');
+        response.end('404 File not found.');
+      }
+    };
+  },
 
   isAsyncFunction: function (fn) {
     // return fn instanceof AsyncFunction && AsyncFunction !== Function && AsyncFunction !== GeneratorFunction === true;

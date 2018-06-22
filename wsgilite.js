@@ -22,6 +22,7 @@ const {
   extendMeta,
   actionMetaSkip404,
   actionMetaDoFnAndKeepConfigs,
+  MiddlewareDefault404,
 } = require('./common');
 
 const {
@@ -196,6 +197,8 @@ class WSGILite extends DefSubRoute {
 
     this.config.debug = Maybe.just(this.config.debug).isPresent() ? this.config.debug : false;
 
+    this.config.middleware404 = Maybe.just(this.config.middleware404).isPresent() ? this.config.middleware404 : MiddlewareDefault404;
+
     this.tokens = new Tokens();
     // this.secret = this.config.secret ? this.config.secret : this.tokens.secretSync();
     if (!this.config.secret) {
@@ -213,14 +216,7 @@ class WSGILite extends DefSubRoute {
   }
 
   doRouting(request, response, meta) {
-    const self = this;
-    return Promise.resolve(0).then(()=>self.enterMiddlewares(request, response, meta)).then((finished) => {
-      if (!finished) {
-        response.statusCode = 404;
-        response.setHeader('Content-Type', 'text/plain');
-        response.end('404 File not found.');
-      }
-    });
+    return Promise.resolve(0).then(()=>this.enterMiddlewares(request, response, meta)).then(this.config.middleware404(request, response, meta));
   }
   enterMiddlewares(request, response, meta) {
     const self = this;
