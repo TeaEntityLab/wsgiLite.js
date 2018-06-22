@@ -212,10 +212,19 @@ class WSGILite extends DefSubRoute {
     this.serveTimes = 0;
   }
 
-  enterMiddlewares(request, response) {
+  doRouting(request, response, meta) {
+    const self = this;
+    return Promise.resolve(0).then(()=>self.enterMiddlewares(request, response, meta)).then((finished) => {
+      if (!finished) {
+        response.statusCode = 404;
+        response.setHeader('Content-Type', 'text/plain');
+        response.end('404 File not found.');
+      }
+    });
+  }
+  enterMiddlewares(request, response, meta) {
     const self = this;
     return MonadIO.generatorToPromise(function *() {
-      let meta = {};
 
       if (self.config.enableFormParsing) {
         var err = yield new Promise(function(resolve, reject) {
@@ -334,13 +343,8 @@ class WSGILite extends DefSubRoute {
     const self = this;
     return http.createServer((request, response) => {
 
-      Promise.resolve(0).then(()=>self.enterMiddlewares(request, response)).then((finished) => {
-        if (!finished) {
-          response.statusCode = 404;
-          response.setHeader('Content-Type', 'text/plain');
-          response.end('404 File not found.');
-        }
-      });
+      let meta = {};
+      self.doRouting(request, response, meta);
 
     });
   }
