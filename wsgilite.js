@@ -206,6 +206,7 @@ class WSGILite extends DefSubRoute {
     this.config = config ? config : {};
     this.config.csrfMaxAge = Maybe.just(this.config.csrfMaxAge).isPresent() ? this.config.csrfMaxAge : 2*1000*60*60;
     this.config.enableFormParsing = Maybe.just(this.config.enableFormParsing).isPresent() ? this.config.enableFormParsing : true;
+    this.config.formidableIncomingFormSettings = Maybe.just(this.config.formidableIncomingFormSettings).isPresent() ? this.config.formidableIncomingFormSettings : {};
 
     this.config.processNum = Maybe.just(this.config.processNum).isPresent() ? this.config.processNum : numCPUs;
     this.config.softExitWorker = Maybe.just(this.config.softExitWorker).isPresent() ? this.config.softExitWorker : true;
@@ -266,6 +267,7 @@ class WSGILite extends DefSubRoute {
       if (self.config.enableFormParsing) {
         return new Promise(function(resolve, reject) {
           var form = new formidable.IncomingForm();
+          Object.assign(form, self.config.formidableIncomingFormSettings);
           form.parse(request, function(err, fields, files) {
             if (err) {
               reject(err);
