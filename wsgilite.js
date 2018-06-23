@@ -86,6 +86,7 @@ class Route {
     var matchesAndParam = this.routeParser.match(meta._url_path);
     if (matchesAndParam) {
       var self = this;
+      let errorHandler = self.errorHandler(request, response, meta);
 
       actionMetaSkip404(meta);
       if (self.timeout > 0) {
@@ -103,8 +104,6 @@ class Route {
           process.exit(0);
         }, self.timeout);
       }
-
-      var errorHandler = (e)=>this.middlewareCatchException(request, response, meta)(e, this.wsgilite.config.debug);
 
       if (isAsyncFunction(self.fn)) {
         Promise.resolve().then(()=>self.fn(request, response, meta)).catch(errorHandler).then((v)=>{
@@ -149,6 +148,9 @@ class Route {
         }
       }
     }
+  }
+  errorHandler(request, response, meta) {
+    return (e)=>this.middlewareCatchException(request, response, meta)(e, this.wsgilite.config.debug);
   }
 }
 
@@ -232,6 +234,7 @@ class WSGILite extends DefSubRoute {
   }
 
   redirect(path) {
+    const self = this;
     return (request, response, meta)=>{
       // Brand new one
       meta = clone(meta);
@@ -241,21 +244,27 @@ class WSGILite extends DefSubRoute {
       // Possibly 404
       actionMetaSkip404(meta, true);
       // Do routing again!!
-      this.enterMiddlewares(request, response, meta).then(this.config.middleware404(request, response, meta));
+      let errorHandler = self.errorHandler(request, response, meta);
+      this.enterMiddlewares(request, response, meta).catch(errorHandler).then(this.config.middleware404(request, response, meta)).catch(errorHandler);
     };
   }
   redirectAsFunction() {
     return (path) => this.redirect(path);
   }
   doRouting(request, response, meta) {
-    return Promise.resolve(0).then(()=>this.preprocessAndEnterMiddlewares(request, response, meta)).then(this.config.middleware404(request, response, meta));
+    const self = this;
+    let errorHandler = self.errorHandler(request, response, meta);
+    return Promise.resolve(0).then(()=>this.preprocessAndEnterMiddlewares(request, response, meta)).catch(errorHandler).then(this.config.middleware404(request, response, meta)).catch(errorHandler);
   }
   preprocessAndEnterMiddlewares(request, response, meta) {
     const self = this;
+    let errorHandler = self.errorHandler(request, response, meta);
+
+    let enterMiddlewaresFunctor = ()=>self.enterMiddlewares(request, response, meta).catch(errorHandler);
     return MonadIO.generatorToPromise(function *() {
 
       if (self.config.enableFormParsing) {
-        var err = yield new Promise(function(resolve, reject) {
+        return new Promise(function(resolve, reject) {
           var form = new formidable.IncomingForm();
           form.parse(request, function(err, fields, files) {
             if (err) {
@@ -269,22 +278,15 @@ class WSGILite extends DefSubRoute {
 
             resolve();
           });
-        });
-
-        if (err) {
-          console.log(err);
-          response.statusCode = 500;
-          response.setHeader('Content-Type', 'text/plain');
-          response.end('500 Internal Server Error');
-          return true;
-        }
+        }).catch(errorHandler).then(enterMiddlewaresFunctor);
       }
 
-      return yield self.enterMiddlewares(request, response, meta);
+      return enterMiddlewaresFunctor();
     });
   }
   enterMiddlewares(request, response, meta) {
     const self = this;
+    let errorHandler = self.errorHandler(request, response, meta);
     return MonadIO.generatorToPromise(function *() {
       for (var i = 0; i < self.middlewares.length; i++) {
         var middleware = self.middlewares[i];
@@ -292,7 +294,6 @@ class WSGILite extends DefSubRoute {
           break;
         }
 
-        var errorHandler = (e)=>self.config.middlewareCatchException(request, response, meta)(e, self.config.debug);
         var anyPromiseResult = undefined;
         try {
           anyPromiseResult = middleware(request, response, meta);
@@ -331,6 +332,9 @@ class WSGILite extends DefSubRoute {
 
       return response.finished || meta._skip404;
     });
+  }
+  errorHandler(request, response, meta) {
+    return (e)=>this.config.middlewareCatchException(request, response, meta)(e, this.config.debug);
   }
 
   addMiddleware(middleware) {
