@@ -2,6 +2,7 @@ const Cookies = require( "cookies" );
 
 const {
   defCheckRoutes,
+  actionResponseHeaderContentTypeTextPlainSilent,
 } = require('./common');
 
 function getCSRF_token (request, response) {
@@ -38,8 +39,8 @@ module.exports = {
       var CSRF_token = getCSRF_token(request, response);
 
       if (CSRF_token != meta.CSRF_token || (!wsgilite.tokens.verify(wsgilite.secret, CSRF_token))) {
+        actionResponseHeaderContentTypeTextPlainSilent(response);
         response.statusCode = 403;
-        response.setHeader('Content-Type', 'text/plain');
         response.end('CSRF detected.');
       }
     });
@@ -51,8 +52,8 @@ module.exports = {
       var CSRF_token = request.headers['x-csrf-token'];
 
       if ((CSRF_token != meta.CSRF_token) || (!wsgilite.tokens.verify(wsgilite.secret, CSRF_token))) {
+        actionResponseHeaderContentTypeTextPlainSilent(response);
         response.statusCode = 403;
-        response.setHeader('Content-Type', 'text/plain');
         response.end('CSRF detected.');
       }
     });
