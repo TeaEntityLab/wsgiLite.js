@@ -115,13 +115,14 @@ function MiddlewareResponseFolderFileList(request, response, meta) {
 `
 <html lang="en">
 <head><meta charset="utf-8"><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"></head>
-<body><ul class="list-group">
+<body>
+<ul class="list-group">
+${files.map((file)=>`<li class="list-group-item"></li><a href="${meta._url_path}/${file}">${file}</a></li>`).join('')}
+</ul>
+</body>
+</html>
 `
         );
-        files.forEach((file) => {
-          response.write(`<li class="list-group-item"></li><a href="${meta._url_path}/${file}">${file}</a></li>`);
-        });
-        response.write('</ul></body></html>');
         response.end();
       }
     })
