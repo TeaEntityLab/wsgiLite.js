@@ -27,9 +27,8 @@ const mimeMap = {
 
 module.exports = {
   mimeMap,
-  defMiddlewareServeFileStatic: function (baseDir, middleware404) {
+  defMiddlewareServeFileStatic: function (baseDir, doRawExceptionReturn) {
     baseDir = baseDir ? baseDir : '.';
-    middleware404 = middleware404 ? middleware404 : (request, response, meta)=>MiddlewareDefault404(request, response, meta)(false);
 
     return function (request, response, meta) {
       const pathname = meta.relativePath ? meta.relativePath : meta._url_path;
@@ -45,7 +44,7 @@ module.exports = {
       */
       actionMetaSkip404(meta);
 
-      return new Promise(function(resolve, reject) {
+      let promise = new Promise(function(resolve, reject) {
         // read file from file
         var stream = fs.createReadStream(finalPath);
 
@@ -67,9 +66,15 @@ module.exports = {
 
           resolve(true);
         });
-      }).catch((e)=>{
+      });
+
+      if (doRawExceptionReturn) {
+        return promise;
+      }
+
+      return promise.catch((e)=>{
         if (e && e.code && e.code === 'ENOENT') {
-          middleware404(request, response, meta);
+          MiddlewareDefault404(request, response, meta)(false);
         } else {
           console.log(e);
           response.statusCode = 500;
