@@ -27,11 +27,27 @@ const mimeMap = {
   '.doc': 'application/msword'
 };
 
+function actionGetFileRelativePathFromMeta(meta) {
+  return Maybe.just(meta.relativePath).isPresent() ? meta.relativePath : meta._url_path;
+}
+function MiddlewareDefaultFileError(request, response, meta) {
+  return function (e, pathname) {
+    console.log(e);
+    if (e && e.code && (e.code === 'ENOENT' || e.code === 'EISDIR')) {
+      MiddlewareDefault404(request, response, meta)(false);
+    } else {
+      response.statusCode = 500;
+      response.end(`Error getting the file: ${pathname}.`);
+    }
+
+    return e;
+  }
+}
 function defMiddlewareServeFileStatic(baseDir, doRawExceptionReturn) {
   baseDir = baseDir ? baseDir : '.';
 
   return function (request, response, meta) {
-    const pathname = Maybe.just(meta.relativePath).isPresent() ? meta.relativePath : meta._url_path;
+    const pathname = actionGetFileRelativePathFromMeta(meta);
     const ext = path.parse(pathname).ext;
     const finalPath = `${process.cwd()}${sep}${baseDir}${sep}${pathname}`;
 
@@ -48,14 +64,16 @@ function defMiddlewareServeFileStatic(baseDir, doRawExceptionReturn) {
       // read file from file
       var stream = fs.createReadStream(finalPath);
 
-      stream.on('open', () => {
-        response.writeHead(200, {
-          'Transfer-Encoding': 'chunked',
-          'Content-type': mimeMap[ext] || 'text/plain',
-          'X-Content-Type-Options': 'nosniff',
-        });
-      });
+      let hasHeaderWritten = false;
       stream.on('data', (chunk) => {
+        if (!hasHeaderWritten) {
+          hasHeaderWritten = true;
+          response.writeHead(200, {
+            'Transfer-Encoding': 'chunked',
+            'Content-type': mimeMap[ext] || 'text/plain',
+            'X-Content-Type-Options': 'nosniff',
+          });
+        }
         response.write(chunk);
       });
       stream.on('error', function(err){
@@ -73,19 +91,69 @@ function defMiddlewareServeFileStatic(baseDir, doRawExceptionReturn) {
     }
 
     return promise.catch((e)=>{
-      if (e && e.code && e.code === 'ENOENT') {
-        MiddlewareDefault404(request, response, meta)(false);
-      } else {
-        console.log(e);
-        response.statusCode = 500;
-        response.end(`Error getting the file: ${pathname}.`);
-      }
+      MiddlewareDefaultFileError(request, response, meta)(e, pathname);
       return e;
     });
   }
+}
+function MiddlewareResponseFolderFileList(request, response, meta) {
+  return (baseDir, pathname) => {
+    const finalPath = `${process.cwd()}${sep}${baseDir}${sep}${pathname}`;
+
+    fs.readdir(finalPath, (e, files) => {
+      if (e) {
+        MiddlewareDefaultFileError(request, response, meta)(e, pathname);
+      } else {
+
+        try {
+          response.setHeader('Content-Type', 'text/html; charset=utf-8');
+        } catch (e) {
+          console.log(e);
+        }
+
+        response.write('<html lang="en">');
+        response.write('<head>');
+        response.write('<meta charset="utf-8">');
+        response.write('</head>');
+        response.write('<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">');
+        response.write('<body>');
+
+        response.write('<ul class="list-group">');
+        files.forEach((file) => {
+          response.write('<li class="list-group-item"></li>');
+          response.write(`<a href="${meta._url_path}/${file}">${file}</a>`);
+          response.write('</li>');
+        });
+        response.write('</ul>');
+
+        response.write('</body>');
+
+        response.write('</html>');
+        response.end();
+      }
+    })
+  };
 }
 
 module.exports = {
   mimeMap,
   defMiddlewareServeFileStatic,
+  defMiddlewareServeFileStaticWithDirList: function (baseDir, doRawExceptionReturn) {
+    return function (request, response, meta) {
+      return defMiddlewareServeFileStatic(baseDir, true)(request, response, meta).catch((e) => {
+        const pathname = actionGetFileRelativePathFromMeta(meta);
+        // const ext = path.parse(pathname).ext;
+        const finalPath = `${process.cwd()}${sep}${baseDir}${sep}${pathname}`;
+
+        if (e && e.code === 'EISDIR') {
+          console.log(`${pathname} is a folder`);
+          MiddlewareResponseFolderFileList(response, response, meta)(baseDir, pathname);
+          return true;
+        } else {
+          MiddlewareDefaultFileError(request, response, meta)(e, pathname);
+          return e;
+        }
+      });
+    };
+  },
 };

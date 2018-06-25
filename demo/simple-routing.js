@@ -7,6 +7,7 @@ const {
 const {
   mimeMap,
   defMiddlewareServeFileStatic,
+  defMiddlewareServeFileStaticWithDirList,
 } = require('../file');
 const {
   defFormCsrfCheckRoutes,
@@ -67,7 +68,7 @@ server.GET('/user/:id', function *(request, response, meta) {
   return yield Promise.resolve(meta); // {"_skip404":true,"_url_path":"/user/theID","msg3":"I got it3","msg2":"I got it2","msg":"I got it","id":"theID"}
 });
 // Path parameters(until `?` or the end)
-server.GET('/file/*relativePath', (request, response, meta)=>{
+server.GET('/file*relativePath', (request, response, meta)=>{
   defMiddlewareServeFileStatic('demo')(request, response, meta);
 });
 
