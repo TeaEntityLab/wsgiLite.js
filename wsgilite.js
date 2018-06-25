@@ -205,15 +205,17 @@ class WSGILite extends DefSubRoute {
     super(null, '');
     this.config = config ? config : {};
     this.config.csrfMaxAge = Maybe.just(this.config.csrfMaxAge).isPresent() ? this.config.csrfMaxAge : 2*1000*60*60;
-    this.config.enableFormParsing = Maybe.just(this.config.enableFormParsing).isPresent() ? this.config.enableFormParsing : true;
+    this.config.csrfMaxAge = (+this.config.csrfMaxAge) > 0 ? (+this.config.csrfMaxAge) : 2*1000*60*60;
+    this.config.enableFormParsing = Maybe.just(this.config.enableFormParsing).isPresent() ? !!this.config.enableFormParsing : true;
     this.config.formidableIncomingFormSettings = Maybe.just(this.config.formidableIncomingFormSettings).isPresent() ? this.config.formidableIncomingFormSettings : {};
 
     this.config.processNum = Maybe.just(this.config.processNum).isPresent() ? this.config.processNum : numCPUs;
-    this.config.softExitWorker = Maybe.just(this.config.softExitWorker).isPresent() ? this.config.softExitWorker : true;
-    this.config.workerServeTimesToRestart = Maybe.just(this.config.workerServeTimesToRestart).isPresent() ? this.config.workerServeTimesToRestart : 0;
-    this.config.logProcessMessage = Maybe.just(this.config.logProcessMessage).isPresent() ? this.config.logProcessMessage : false;
+    this.config.processNum = (+this.config.processNum) > 0 ? (+this.config.processNum) : 1;
+    this.config.softExitWorker = Maybe.just(this.config.softExitWorker).isPresent() ? !!this.config.softExitWorker : true;
+    this.config.workerServeTimesToRestart = Maybe.just(this.config.workerServeTimesToRestart).isPresent() ? (+this.config.workerServeTimesToRestart) : 0;
+    this.config.logProcessMessage = Maybe.just(this.config.logProcessMessage).isPresent() ? !!this.config.logProcessMessage : false;
 
-    this.config.debug = Maybe.just(this.config.debug).isPresent() ? this.config.debug : false;
+    this.config.debug = Maybe.just(this.config.debug).isPresent() ? !!this.config.debug : false;
 
     this.config.middleware404 = Maybe.just(this.config.middleware404).isPresent() ? this.config.middleware404 : MiddlewareDefault404;
     this.config.middlewareCatchException = Maybe.just(this.config.middlewareCatchException).isPresent() ? this.config.middlewareCatchException : MiddlewareDefaultCatchException;
