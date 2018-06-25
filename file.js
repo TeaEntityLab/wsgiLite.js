@@ -111,24 +111,17 @@ function MiddlewareResponseFolderFileList(request, response, meta) {
           console.log(e);
         }
 
-        response.write('<html lang="en">');
-        response.write('<head>');
-        response.write('<meta charset="utf-8">');
-        response.write('</head>');
-        response.write('<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">');
-        response.write('<body>');
-
-        response.write('<ul class="list-group">');
+        response.write(
+`
+<html lang="en">
+<head><meta charset="utf-8"><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"></head>
+<body><ul class="list-group">
+`
+        );
         files.forEach((file) => {
-          response.write('<li class="list-group-item"></li>');
-          response.write(`<a href="${meta._url_path}/${file}">${file}</a>`);
-          response.write('</li>');
+          response.write(`<li class="list-group-item"></li><a href="${meta._url_path}/${file}">${file}</a></li>`);
         });
-        response.write('</ul>');
-
-        response.write('</body>');
-
-        response.write('</html>');
+        response.write('</ul></body></html>');
         response.end();
       }
     })
