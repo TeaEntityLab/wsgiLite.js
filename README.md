@@ -19,6 +19,7 @@ Thus I make this project, and make it simple & almost just a pure nodejs http se
 
 * Built-in
   * CSRF Checking
+  * Timeout Customizing for each route
   * Exception-Handling(Exceptions in Middleware & Route handlers will be caught)
   * Path parameters parsing, routing path & methods matching(built by route-parser([npm](https://www.npmjs.com/package/route-parser) [github](https://github.com/rcs/route-parser)))
   * Query parameters(built-in module:*url*) & Form fields parsing(built by formidable([npm](https://www.npmjs.com/package/formidable) [github](https://github.com/felixge/node-formidable)))

@@ -11,6 +11,27 @@
     "type": "git",
     "url": "git+https://github.com/TeaEntityLab/wsgiLite.js.git"
   },
+  "keywords": [
+    "wsgi",
+    "wsgi-server",
+    "wsgi-application",
+    "wsgi-framework",
+    "wsgi-middleware",
+    "nodejs",
+    "http-server",
+    "lightweight",
+    "es6",
+    "es6-modules",
+    "es6-javascript",
+    "es7",
+    "template",
+    "csrf",
+    "csrf-protection",
+    "csrf-prevention",
+    "lightweight-wsgi-framework",
+    "laravel-framework",
+    "ror"
+  ],
   "author": "John Lee",
   "license": "MIT",
   "bugs": {
@@ -26,6 +47,7 @@
     "route-parser": "0.0.5"
   },
   "devDependencies": {
+    "request": "^2.87.0",
     "request-promise-native": "^1.0.5"
   }
 }
