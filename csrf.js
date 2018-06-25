@@ -1,4 +1,4 @@
-const Cookies = require( "cookies" );
+const Cookies = require('cookies');
 
 const {
   defCheckRoutes,
