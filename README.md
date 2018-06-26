@@ -67,6 +67,8 @@ const server = new WSGILite({
   secret: 'abcdefg', // The secret key for CSRF
   logProcessMessage: true, // Log the multiple processes starting/ending messages.
   debug: true, // Debug mode, it will show stacktrace of errors in the responses
+  isHttps: false, // Is it a https server?
+  createServerOptions: {}, // Additional createServer options for http/https.createServer(options)
 
   workerServeTimesToRestart: 500, // Each child worker will auto-restart after it served 500 requests
 });

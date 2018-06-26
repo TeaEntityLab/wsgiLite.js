@@ -5,6 +5,7 @@ const cluster = require('cluster');
 const numCPUs = require('os').cpus().length;
 
 const http = require('http');
+const https = require('https');
 
 const RouteParser = require('route-parser');
 const formidable = require('formidable')
@@ -204,6 +205,8 @@ class WSGILite extends DefSubRoute {
   constructor(config) {
     super(null, '');
     this.config = config ? config : {};
+    this.config.createServerOptions = Maybe.just(this.config.createServerOptions).isPresent() ? this.config.createServerOptions : {};
+    this.config.isHttps = Maybe.just(this.config.isHttps).isPresent() ? this.config.isHttps : false;
     this.config.csrfMaxAge = Maybe.just(this.config.csrfMaxAge).isPresent() ? this.config.csrfMaxAge : 2*1000*60*60;
     this.config.csrfMaxAge = (+this.config.csrfMaxAge) > 0 ? (+this.config.csrfMaxAge) : 2*1000*60*60;
     this.config.enableFormParsing = Maybe.just(this.config.enableFormParsing).isPresent() ? !!this.config.enableFormParsing : true;
@@ -391,12 +394,20 @@ class WSGILite extends DefSubRoute {
 
   createServer() {
     const self = this;
-    return http.createServer((request, response) => {
+
+    let listener = (request, response) => {
 
       let meta = {};
       self.doRouting(request, response, meta);
 
-    });
+    };
+
+    let serverClass = self.config.isHttps ? https : http;
+    if (self.config.isHttps || Number(process.version.match(/^v(\d+\.\d+)/)[1]) >= 9.6) {
+      return serverClass.createServer(self.config.createServerOptions, listener);
+    } else {
+      return serverClass.createServer(listener);
+    }
   }
 
   listen(...args) {
