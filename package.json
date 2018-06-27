@@ -47,6 +47,7 @@
     "route-parser": "0.0.5"
   },
   "devDependencies": {
+    "loadtest": "^3.0.3",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5"
   }
