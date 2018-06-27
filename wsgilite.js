@@ -449,6 +449,10 @@ class WSGILite extends DefSubRoute {
       this._server.timeout = 0;
       this._server.listen(...args);
       if (this.config.logProcessMessage || this.config.debug) {console.log(`Worker ${process.pid} started`);}
+
+      if (this.config.processNum <= 0) {
+        this.handleSingleProcessServerSocket();
+      }
     }
   }
   terminate() {
@@ -466,12 +470,46 @@ class WSGILite extends DefSubRoute {
       }
 
       if (this.config.processNum <= 0 && this._server) {
-        this._server.close();
-        setImmediate(() => this._server.emit('close'));
+        this.terminateForSingleProcessServer();
       }
     } else {
       process.send(MSG_WSGILITE_TERMINATE_MASTER);
     }
+  }
+  terminateForSingleProcessServer() {
+
+    // Close the server
+    this._server.close(function () {
+      if (this.config.debug) {console.log('Server closed!');}
+    });
+    // Destroy all open sockets
+    for (var socketId in this._sockets) {
+      if (this.config.debug) {console.log('socket', socketId, 'destroyed');}
+      this._sockets[socketId].destroy();
+    }
+
+    setImmediate(() => this._server.emit('close'));
+  }
+  handleSingleProcessServerSocket() {
+    // Maintain a hash of all connected sockets
+    var nextSocketId = 0;
+    this._sockets = {};
+    this._server.on('connection', (socket) => {
+      // Add a newly connected socket
+      var socketId = nextSocketId++;
+      this._sockets[socketId] = socket;
+      if (this.config.debug) {console.log('socket', socketId, 'opened');}
+
+      // Remove the socket when it closes
+      socket.on('close', () => {
+        if (this.config.debug) {console.log('socket', socketId, 'closed');}
+
+        delete this._sockets[socketId];
+      });
+
+      // Extend socket lifetime for demo purposes
+      socket.setTimeout(4000);
+    });
   }
 
   // get server() {
