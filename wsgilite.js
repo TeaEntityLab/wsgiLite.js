@@ -480,7 +480,7 @@ class WSGILite extends DefSubRoute {
   terminateForSingleProcessServer() {
 
     // Close the server
-    this._server.close(function () {
+    this._server.close(() => {
       if (this.config.debug) {console.log('Server closed!');}
     });
     // Destroy all open sockets
