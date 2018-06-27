@@ -216,6 +216,7 @@ class WSGILite extends DefSubRoute {
     this.config.softExitWorker = Maybe.just(this.config.softExitWorker).isPresent() ? !!this.config.softExitWorker : true;
     this.config.workerServeTimesToRestart = Maybe.just(this.config.workerServeTimesToRestart).isPresent() ? (+this.config.workerServeTimesToRestart) : 0;
     this.config.logProcessMessage = Maybe.just(this.config.logProcessMessage).isPresent() ? !!this.config.logProcessMessage : false;
+    this.config.onServerCreated = Maybe.just(this.config.onServerCreated).isPresent() && typeof this.config.onServerCreated === 'function' ? this.config.onServerCreated : ()=>{};
 
     this.config.debug = Maybe.just(this.config.debug).isPresent() ? !!this.config.debug : false;
 
@@ -449,10 +450,10 @@ class WSGILite extends DefSubRoute {
       this._server.timeout = 0;
       this._server.listen(...args);
       if (this.config.logProcessMessage || this.config.debug) {console.log(`Worker ${process.pid} started`);}
-
       if (this.config.processNum <= 0) {
         this.handleSingleProcessServerSocket();
       }
+      this.config.onServerCreated(this._server);
     }
   }
   terminate() {
@@ -508,7 +509,7 @@ class WSGILite extends DefSubRoute {
       });
 
       // Extend socket lifetime for demo purposes
-      socket.setTimeout(4000);
+      socket.setTimeout(0);
     });
   }
 
