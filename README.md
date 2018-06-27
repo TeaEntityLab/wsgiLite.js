@@ -68,7 +68,9 @@ const server = new WSGILite({
   logProcessMessage: true, // Log the multiple processes starting/ending messages.
   debug: true, // Debug mode, it will show stacktrace of errors in the responses
   isHttps: false, // Is it a https server?
-  createServerOptions: {}, // Additional createServer options for http/https.createServer(options)
+  processNum: require('os').cpus().length, // N + 1 processes (cluster: 1 * master + n * fastcgi style http/https serving)
+  // processNum: 0, // Single process
+  // createServerOptions: {}, // Additional createServer options for http/https.createServer(options)
 
   workerServeTimesToRestart: 500, // Each child worker will auto-restart after it served 500 requests
 });

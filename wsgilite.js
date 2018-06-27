@@ -205,7 +205,7 @@ class WSGILite extends DefSubRoute {
   constructor(config) {
     super(null, '');
     this.config = config ? config : {};
-    this.config.createServerOptions = Maybe.just(this.config.createServerOptions).isPresent() ? this.config.createServerOptions : {};
+    // this.config.createServerOptions = Maybe.just(this.config.createServerOptions).isPresent() ? this.config.createServerOptions : {};
     this.config.isHttps = Maybe.just(this.config.isHttps).isPresent() ? this.config.isHttps : false;
     this.config.csrfMaxAge = Maybe.just(this.config.csrfMaxAge).isPresent() ? this.config.csrfMaxAge : 2*1000*60*60;
     this.config.csrfMaxAge = (+this.config.csrfMaxAge) > 0 ? (+this.config.csrfMaxAge) : 2*1000*60*60;
@@ -213,7 +213,6 @@ class WSGILite extends DefSubRoute {
     this.config.formidableIncomingFormSettings = Maybe.just(this.config.formidableIncomingFormSettings).isPresent() ? this.config.formidableIncomingFormSettings : {};
 
     this.config.processNum = Maybe.just(this.config.processNum).isPresent() ? this.config.processNum : numCPUs;
-    this.config.processNum = (+this.config.processNum) > 0 ? (+this.config.processNum) : 1;
     this.config.softExitWorker = Maybe.just(this.config.softExitWorker).isPresent() ? !!this.config.softExitWorker : true;
     this.config.workerServeTimesToRestart = Maybe.just(this.config.workerServeTimesToRestart).isPresent() ? (+this.config.workerServeTimesToRestart) : 0;
     this.config.logProcessMessage = Maybe.just(this.config.logProcessMessage).isPresent() ? !!this.config.logProcessMessage : false;
@@ -403,7 +402,10 @@ class WSGILite extends DefSubRoute {
     };
 
     let serverClass = self.config.isHttps ? https : http;
-    if (self.config.isHttps || Number(process.version.match(/^v(\d+\.\d+)/)[1]) >= 9.6) {
+    if (
+      self.config.createServerOptions
+      && (self.config.isHttps || Number(process.version.match(/^v(\d+\.\d+)/)[1]) >= 9.6)
+    ) {
       return serverClass.createServer(self.config.createServerOptions, listener);
     } else {
       return serverClass.createServer(listener);
@@ -411,13 +413,14 @@ class WSGILite extends DefSubRoute {
   }
 
   listen(...args) {
-    if (cluster.isMaster) {
+    if (cluster.isMaster && this.config.processNum > 0) {
       this.isDying = false;
 
       if (this.config.logProcessMessage || this.config.debug) {console.log(`Master ${process.pid} is running`);}
       // Fork workers.
       for (let i = 0; i < this.config.processNum; i++) {
         var worker = cluster.fork();
+        if (this.config.logProcessMessage || this.config.debug) {console.log(`worker ${worker.process.pid} forked`);}
         worker.on('message', (msg) => {
           if (this.config.logProcessMessage || this.config.debug) {console.log(msg);}
           if (msg === MSG_WSGILITE_TERMINATE_MASTER) {
@@ -460,6 +463,11 @@ class WSGILite extends DefSubRoute {
       });
       while (this.workers.length > 0) {
           this.workers.pop();
+      }
+
+      if (this.config.processNum <= 0 && this._server) {
+        this._server.close();
+        setImmediate(() => this._server.emit('close'));
       }
     } else {
       process.send(MSG_WSGILITE_TERMINATE_MASTER);
