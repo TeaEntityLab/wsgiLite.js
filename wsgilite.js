@@ -385,16 +385,18 @@ class WSGILite extends DefSubRoute {
     this.clusterMasterResponseHandlers = this.clusterMasterResponseHandlers.filter((item)=>item !== clusterMasterResponseHandler);
   }
   requestActionOnClusterMaster(data) {
-    let msgRequest = {event: MSG_WSGILITE_DO_THINGS_MASTER, data};
+    let requestId = `${process.pid}_${Date.now()}_${Math.floor(Math.random()*Number.MAX_SAFE_INTEGER)}`;
+    let msgRequest = {event: MSG_WSGILITE_DO_THINGS_MASTER, requestId, data};
 
     if (cluster.isMaster) {
       return new Promise((resolve, reject) => {
         let worker;
         let handle;
-        let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS};
+        let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, requestId};
 
         this.handleClusterMasterRequest(worker, msgRequest, handle).catch((e)=>{
           msgResponse.error = e;
+          msgResponse.event = MSG_WSGILITE_DO_THINGS_WORKER_FAILURE;
           reject(msgResponse);
         }).then((result)=>{
           msgResponse.result = result;
@@ -405,18 +407,21 @@ class WSGILite extends DefSubRoute {
 
     return new Promise((resolve, reject) => {
       let handler = (msg, handle) => {
-        if (msg && msg.event === MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS) {
-          resolve(msg, handle);
-        } else {
-          reject(msg, handle);
+        if (msg.requestId === requestId) {
+          if (msg && msg.event === MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS) {
+            resolve(msg, handle);
+          } else {
+            reject(msg, handle);
+          }
+          this.removeClusterMasterResponseHandler(handler);
         }
-        this.removeClusterMasterResponseHandler(handler);
       };
       this.addClusterMasterResponseHandler(handler);
       process.send(msgRequest);
     });
   }
   handleClusterMasterRequest(worker, msg, handle) {
+    let requestId = msg.requestId;
     let result = [];
     let errorHandled = false;
 
@@ -424,7 +429,7 @@ class WSGILite extends DefSubRoute {
     const errorHandler = (e) => {
       if (worker && (!errorHandled)) {
         console.log(e);
-        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, error: e, errorMessage: e.toString(), errorStacktrace: e.stacktrace});
+        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, error: e, errorMessage: e.toString(), errorStacktrace: e.stacktrace});
       }
       errorHandled = true;
       return Promise.reject(e);
@@ -454,7 +459,7 @@ class WSGILite extends DefSubRoute {
         result.push(anyResult);
       }
       if (worker) {
-        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, result});
+        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, requestId, result});
       }
 
       return result;
@@ -534,9 +539,10 @@ class WSGILite extends DefSubRoute {
           return;
         }
         if (msg.event === MSG_WSGILITE_DO_THINGS_MASTER) {
+          let request = msg.requestId;
           let result = [];
           if (this.clusterMasterRequestHandlers.length <= 0) {
-            worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, result});
+            worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, requestId, result});
             return;
           }
 
