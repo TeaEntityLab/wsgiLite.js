@@ -217,6 +217,8 @@ class WSGILite extends DefSubRoute {
     this.config.workerServeTimesToRestart = Maybe.just(this.config.workerServeTimesToRestart).isPresent() ? (+this.config.workerServeTimesToRestart) : 0;
     this.config.logProcessMessage = Maybe.just(this.config.logProcessMessage).isPresent() ? !!this.config.logProcessMessage : false;
     this.config.onServerCreated = Maybe.just(this.config.onServerCreated).isPresent() && typeof this.config.onServerCreated === 'function' ? this.config.onServerCreated : ()=>{};
+    this.config.onMessageMaster = Maybe.just(this.config.onMessageMaster).isPresent() && typeof this.config.onMessageMaster === 'function' ? this.config.onMessageMaster : ()=>{};
+    this.config.onMessageWorker = Maybe.just(this.config.onMessageWorker).isPresent() && typeof this.config.onMessageWorker === 'function' ? this.config.onMessageWorker : ()=>{};
 
     this.config.debug = Maybe.just(this.config.debug).isPresent() ? !!this.config.debug : false;
 
@@ -422,24 +424,34 @@ class WSGILite extends DefSubRoute {
       for (let i = 0; i < this.config.processNum; i++) {
         var worker = cluster.fork();
         if (this.config.logProcessMessage || this.config.debug) {console.log(`worker ${worker.process.pid} forked`);}
-        worker.on('message', (msg) => {
-          if (this.config.logProcessMessage || this.config.debug) {console.log(msg);}
-          if (msg === MSG_WSGILITE_TERMINATE_MASTER) {
-            this.terminate();
-          }
-        })
         this.workers.push(worker);
       }
+      cluster.on('message', (worker, msg, handle) => {
+        if (arguments.length === 2) {
+          handle = msg;
+          msg = worker;
+          worker = undefined;
+        }
+
+        if (this.config.logProcessMessage || this.config.debug) {console.log(msg);}
+        this.config.onMessageMaster(worker, msg, handle);
+        if (msg === MSG_WSGILITE_TERMINATE_MASTER) {
+          this.terminate();
+        }
+      })
       cluster.on('exit', (worker, code, signal) => {
         if (this.config.logProcessMessage || this.config.debug) {console.log(`worker ${worker.process.pid} died`);}
         if (!this.isDying) {
+          this.workers = this.workers.filter((item) => item.process.pid !== worker.process.pid);
           this.workers.push(cluster.fork());
+          if (this.config.logProcessMessage || this.config.debug) {console.log(`worker pid list: ${this.workers.map((item)=>item.process.pid)}`);}
           return;
         }
       });
     } else {
-      process.on('message', (msg) => {
+      process.on('message', (msg, handle) => {
         if (this.config.logProcessMessage || this.config.debug) {console.log(msg);}
+        this.config.onMessageWorker(msg, handle);
         if (msg == MSG_WSGILITE_TERMINATE_WORKER) {
           process.exit(0);
         }

@@ -31,6 +31,12 @@ const wsgilite = new WSGILite({
     httpServer.timeout = 60*1000;
     console.log('server.timeout set');
   }, // Callback on one of servers created(this will be called in Multiple processes)
+  onMessageMaster: function (worker, msg, handle) {
+    console.log(`master got message: ${msg}`);
+  }, // Optional: We could monitor and handle communications between cluster master & workers
+  onMessageWorker: function (msg, handle) {
+    console.log(`worker got message: ${msg}`);
+  }, // Optional: We could monitor and handle communications between cluster master & workers
 
   workerServeTimesToRestart: 500, // Each child worker will auto-restart after it served 500 requests
 });
