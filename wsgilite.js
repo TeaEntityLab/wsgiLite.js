@@ -16,6 +16,7 @@ const MonadIO = require('fpEs/monadio');
 const Maybe = require('fpEs/maybe');
 const {
   clone,
+  debounce,
 } = require('fpEs/fp');
 
 const {
@@ -446,18 +447,22 @@ class WSGILite extends DefSubRoute {
     let timeout = msg.timeout;
     let result = [];
     let errorHandled = false;
+    let timeoutMonitor;
 
     const self = this;
     const errorHandler = (e) => {
       if (worker && (!errorHandled)) {
         console.log(e);
         worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, timeout, error: e, errorMessage: e.toString(), errorStacktrace: e.stack});
+        if (timeoutMonitor) {
+          timeoutMonitor.cancel();
+        }
       }
       errorHandled = true;
       return Promise.reject(e);
     };
     if (timeout && timeout > 0) {
-      setTimeout(() => {
+      timeoutMonitor = debounce(() => {
         let e = new Error('Timeout');
         errorHandler(e).catch(()=>{});
       }, timeout);
@@ -492,6 +497,9 @@ class WSGILite extends DefSubRoute {
         result.push(anyResult);
       }
       if (worker) {
+        if (timeoutMonitor) {
+          timeoutMonitor.cancel();
+        }
         worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, requestId, result});
       }
 
