@@ -32,10 +32,10 @@ const wsgilite = new WSGILite({
     console.log('server.timeout set');
   }, // Callback on one of servers created(this will be called in Multiple processes)
   onMessageMaster: function (worker, msg, handle) {
-    console.log(`master got message: ${msg}`);
+    console.log(`master got message: ${msg.event}`);
   }, // Optional: We could monitor and handle communications between cluster master & workers
   onMessageWorker: function (msg, handle) {
-    console.log(`worker got message: ${msg}`);
+    console.log(`worker got message: ${msg.event}`);
   }, // Optional: We could monitor and handle communications between cluster master & workers
 
   workerServeTimesToRestart: 500, // Each child worker will auto-restart after it served 500 requests
@@ -138,6 +138,21 @@ wsgilite.GET('/template', async (request, response, meta)=>{
           return e.stack;
         })
         ; // ok
+});
+
+// Post jobs to cluster master(if wsgilite.config.processNum > 0)
+wsgilite.addClusterMasterRequestHandler(function (worker, msg, handle) {
+  // throw new Error("There's an exception");
+  if (msg && msg.data && msg.data.action === 'readrecord') {
+    return {data: 'user01'};
+  }
+});
+wsgilite.GET('/requestActionOnClusterMaster', async function (request, response, meta) {
+  // {"event":"MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS","result":[{"data":"user01"}]}
+  return wsgilite.requestActionOnClusterMaster({action: 'readrecord'}).catch((e)=>{
+    console.log(e);
+    return e.errorMessage;
+  });
 });
 
 // Exception

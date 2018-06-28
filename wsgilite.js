@@ -201,6 +201,9 @@ class DefSubRoute {
 
 const MSG_WSGILITE_TERMINATE_MASTER = 'MSG_WSGILITE_TERMINATE_MASTER';
 const MSG_WSGILITE_TERMINATE_WORKER = 'MSG_WSGILITE_TERMINATE_WORKER';
+const MSG_WSGILITE_DO_THINGS_MASTER = 'MSG_WSGILITE_DO_THINGS_MASTER';
+const MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS = 'MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS';
+const MSG_WSGILITE_DO_THINGS_WORKER_FAILURE = 'MSG_WSGILITE_DO_THINGS_WORKER_FAILURE';
 class WSGILite extends DefSubRoute {
   constructor(config) {
     super(null, '');
@@ -237,6 +240,8 @@ class WSGILite extends DefSubRoute {
     ];
     this.routes = [];
     this.workers = [];
+    this.clusterMasterRequestHandlers = [];
+    this.clusterMasterResponseHandlers = [];
     this.isDying = false;
     this.serveTimes = 0;
   }
@@ -367,6 +372,54 @@ class WSGILite extends DefSubRoute {
     }
     this.routes = this.routes.filter(matches);
   }
+  addClusterMasterRequestHandler(clusterMasterRequestHandler) {
+    this.clusterMasterRequestHandlers.push(clusterMasterRequestHandler);
+  }
+  removeClusterMasterRequestHandler(clusterMasterRequestHandler) {
+    this.clusterMasterRequestHandlers = this.clusterMasterRequestHandlers.filter((item)=>item !== clusterMasterRequestHandler);
+  }
+  addClusterMasterResponseHandler(clusterMasterResponseHandler) {
+    this.clusterMasterResponseHandlers.push(clusterMasterResponseHandler);
+  }
+  removeClusterMasterResponseHandler(clusterMasterResponseHandler) {
+    this.clusterMasterResponseHandlers = this.clusterMasterResponseHandlers.filter((item)=>item !== clusterMasterResponseHandler);
+  }
+  requestActionOnClusterMaster(data) {
+    let msgRequest = {event: MSG_WSGILITE_DO_THINGS_MASTER, data};
+
+    if (cluster.isMaster) {
+      return new Promise(function(resolve, reject) {
+        let worker;
+        let handle;
+        let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS};
+
+        let result = [];
+        try {
+          result = this.clusterMasterRequestHandlers.map((item) => item(worker, msgRequest, handle));
+        } catch (e) {
+          msgResponse.error = e;
+          reject(msgResponse);
+          return;
+        }
+        msgResponse.result = result;
+        resolve(msgResponse);
+        return;
+      });
+    }
+
+    return new Promise((resolve, reject) => {
+      let handler = (msg, handle) => {
+        if (msg && msg.event === MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS) {
+          resolve(msg, handle);
+        } else {
+          reject(msg, handle);
+        }
+        this.removeClusterMasterResponseHandler(handler);
+      };
+      this.addClusterMasterResponseHandler(handler);
+      process.send(msgRequest);
+    });
+  }
   defMethod(method, rule, fn) {
     var checker = function (request, response, meta) {
       if (request.method == method) {
@@ -435,8 +488,27 @@ class WSGILite extends DefSubRoute {
 
         if (this.config.logProcessMessage || this.config.debug) {console.log(msg);}
         this.config.onMessageMaster(worker, msg, handle);
-        if (msg === MSG_WSGILITE_TERMINATE_MASTER) {
+
+        if (msg.event === MSG_WSGILITE_TERMINATE_MASTER) {
           this.terminate();
+          return;
+        }
+        if (msg.event === MSG_WSGILITE_DO_THINGS_MASTER) {
+          let result = [];
+          if (this.clusterMasterRequestHandlers.length <= 0) {
+            worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, result});
+            return;
+          }
+
+          try {
+            result = this.clusterMasterRequestHandlers.map((item) => item(worker, msg, handle));
+          } catch (e) {
+            console.log(e);
+            worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, error: e, errorMessage: e.toString(), errorStacktrace: e.stacktrace});
+            return;
+          }
+          worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, result});
+          return;
         }
       })
       cluster.on('exit', (worker, code, signal) => {
@@ -452,8 +524,17 @@ class WSGILite extends DefSubRoute {
       process.on('message', (msg, handle) => {
         if (this.config.logProcessMessage || this.config.debug) {console.log(msg);}
         this.config.onMessageWorker(msg, handle);
-        if (msg == MSG_WSGILITE_TERMINATE_WORKER) {
+        if (msg.event === MSG_WSGILITE_TERMINATE_WORKER) {
           process.exit(0);
+        }
+        if (msg.event === MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS || msg.event === MSG_WSGILITE_DO_THINGS_WORKER_FAILURE) {
+          this.clusterMasterResponseHandlers.forEach((item) => {
+            try {
+              item(msg, handle);
+            } catch (e) {
+              console.log(e);
+            }
+          });
         }
       });
       // Workers can share any TCP connection
@@ -473,7 +554,7 @@ class WSGILite extends DefSubRoute {
       this.isDying = true;
       this.workers.forEach((worker) => {
         if (this.config.softExitWorker) {
-          worker.send(MSG_WSGILITE_TERMINATE_WORKER);
+          worker.send({event: MSG_WSGILITE_TERMINATE_WORKER});
         } else {
           worker.kill();
         }
@@ -486,7 +567,7 @@ class WSGILite extends DefSubRoute {
         this.terminateForSingleProcessServer();
       }
     } else {
-      process.send(MSG_WSGILITE_TERMINATE_MASTER);
+      process.send({event: MSG_WSGILITE_TERMINATE_MASTER});
     }
   }
   terminateForSingleProcessServer() {
