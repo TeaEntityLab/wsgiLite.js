@@ -195,7 +195,7 @@ wsgilite.addClusterMasterRequestHandler(async (worker, msg, handle) => {
 wsgilite.GET('/requestActionOnClusterMaster', async function (request, response, meta) {
   // {"event":"MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS","result":[{"data":"user01"}]}
   return wsgilite.requestActionOnClusterMaster({action: 'readrecord'}).catch((e)=>{
-    console.log(e);
+    console.log(`I got error: ${e.errorMessage}`);
     return e.errorMessage;
   });
 });

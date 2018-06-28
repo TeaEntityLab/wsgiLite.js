@@ -418,13 +418,15 @@ class WSGILite extends DefSubRoute {
   }
   handleClusterMasterRequest(worker, msg, handle) {
     let result = [];
+    let errorHandled = false;
 
     const self = this;
     const errorHandler = (e) => {
-      console.log(e);
-      if (worker) {
+      if (worker && (!errorHandled)) {
+        console.log(e);
         worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, error: e, errorMessage: e.toString(), errorStacktrace: e.stacktrace});
       }
+      errorHandled = true;
       return Promise.reject(e);
     };
     return MonadIO.generatorToPromise(function *() {
