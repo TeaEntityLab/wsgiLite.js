@@ -386,7 +386,7 @@ class WSGILite extends DefSubRoute {
   }
   requestActionOnClusterMaster(data, timeout) {
     let requestId = `${process.pid}_${Date.now()}_${Math.floor(Math.random()*Number.MAX_SAFE_INTEGER)}`;
-    let msgRequest = {event: MSG_WSGILITE_DO_THINGS_MASTER, requestId, data};
+    let msgRequest = {event: MSG_WSGILITE_DO_THINGS_MASTER, requestId, timeout, data};
 
     if (cluster.isMaster) {
       return new Promise((resolve, reject) => {
@@ -434,7 +434,7 @@ class WSGILite extends DefSubRoute {
           this.removeClusterMasterResponseHandler(handler);
 
           let e = new Error('Timeout');
-          let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, error: e, errorMessage: e.toString(), errorStacktrace: e.stack}
+          let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, timeout, error: e, errorMessage: e.toString(), errorStacktrace: e.stack}
           msgResponse.event = MSG_WSGILITE_DO_THINGS_WORKER_FAILURE;
           reject(msgResponse);
         }, timeout);
@@ -443,6 +443,7 @@ class WSGILite extends DefSubRoute {
   }
   handleClusterMasterRequest(worker, msg, handle) {
     let requestId = msg.requestId;
+    let timeout = msg.timeout;
     let result = [];
     let errorHandled = false;
 
@@ -450,13 +451,24 @@ class WSGILite extends DefSubRoute {
     const errorHandler = (e) => {
       if (worker && (!errorHandled)) {
         console.log(e);
-        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, error: e, errorMessage: e.toString(), errorStacktrace: e.stack});
+        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, timeout, error: e, errorMessage: e.toString(), errorStacktrace: e.stack});
       }
       errorHandled = true;
       return Promise.reject(e);
     };
+    if (timeout && timeout > 0) {
+      setTimeout(() => {
+        let e = new Error('Timeout');
+        errorHandler(e).catch(()=>{});
+      }, timeout);
+    }
+
     return MonadIO.generatorToPromise(function *() {
       for (var i = 0; i < self.clusterMasterRequestHandlers.length; i++) {
+        if (errorHandled) {
+          return errorHandler(e);
+        }
+
         var clusterMasterRequestHandler = self.clusterMasterRequestHandlers[i];
 
         var anyResult = undefined;
