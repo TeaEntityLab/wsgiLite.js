@@ -141,7 +141,7 @@ wsgilite.GET('/template', async (request, response, meta)=>{
 });
 
 // Post jobs to cluster master(if wsgilite.config.processNum > 0)
-wsgilite.addClusterMasterRequestHandler(function (worker, msg, handle) {
+wsgilite.addClusterMasterRequestHandler(async (worker, msg, handle) => {
   // throw new Error("There's an exception");
   if (msg && msg.data && msg.data.action === 'readrecord') {
     return {data: 'user01'};
@@ -154,6 +154,12 @@ wsgilite.GET('/requestActionOnClusterMaster', async function (request, response,
     return e.errorMessage;
   });
 });
+// if (require('cluster').isMaster) {
+//   // It could be called on cluster master
+//   wsgilite.requestActionOnClusterMaster({action: 'readrecord'}).catch((e)=>{
+//     return e.errorMessage;
+//   }).then((msg)=>console.log(msg));
+// }
 
 // Exception
 wsgilite.GET('/exception', async function (request, response, meta) {

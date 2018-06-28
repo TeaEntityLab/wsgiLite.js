@@ -388,22 +388,18 @@ class WSGILite extends DefSubRoute {
     let msgRequest = {event: MSG_WSGILITE_DO_THINGS_MASTER, data};
 
     if (cluster.isMaster) {
-      return new Promise(function(resolve, reject) {
+      return new Promise((resolve, reject) => {
         let worker;
         let handle;
         let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS};
 
-        let result = [];
-        try {
-          result = this.clusterMasterRequestHandlers.map((item) => item(worker, msgRequest, handle));
-        } catch (e) {
+        this.handleClusterMasterRequest(worker, msgRequest, handle).catch((e)=>{
           msgResponse.error = e;
           reject(msgResponse);
-          return;
-        }
-        msgResponse.result = result;
-        resolve(msgResponse);
-        return;
+        }).then((result)=>{
+          msgResponse.result = result;
+          resolve(msgResponse);
+        });
       });
     }
 
@@ -418,6 +414,48 @@ class WSGILite extends DefSubRoute {
       };
       this.addClusterMasterResponseHandler(handler);
       process.send(msgRequest);
+    });
+  }
+  handleClusterMasterRequest(worker, msg, handle) {
+    let result = [];
+
+    const self = this;
+    const errorHandler = (e) => {
+      console.log(e);
+      if (worker) {
+        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, error: e, errorMessage: e.toString(), errorStacktrace: e.stacktrace});
+      }
+      return Promise.reject(e);
+    };
+    return MonadIO.generatorToPromise(function *() {
+      for (var i = 0; i < self.clusterMasterRequestHandlers.length; i++) {
+        var clusterMasterRequestHandler = self.clusterMasterRequestHandlers[i];
+
+        var anyResult = undefined;
+        try {
+          anyResult = clusterMasterRequestHandler(worker, msg, handle);
+        } catch (e) {
+          return errorHandler(e);
+        }
+
+        if (anyResult) {
+          if (isAsyncFunction(clusterMasterRequestHandler)) {
+            anyResult = yield anyResult.catch(errorHandler);
+          } else if (isNextable(anyResult)) {
+            anyResult = MonadIO.generatorToPromise(()=>anyResult).catch(errorHandler);
+          }
+          if (isThenable(anyResult)) {
+            anyResult = yield anyResult.catch(errorHandler);
+          }
+        }
+
+        result.push(anyResult);
+      }
+      if (worker) {
+        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, result});
+      }
+
+      return result;
     });
   }
   defMethod(method, rule, fn) {
@@ -500,14 +538,7 @@ class WSGILite extends DefSubRoute {
             return;
           }
 
-          try {
-            result = this.clusterMasterRequestHandlers.map((item) => item(worker, msg, handle));
-          } catch (e) {
-            console.log(e);
-            worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, error: e, errorMessage: e.toString(), errorStacktrace: e.stacktrace});
-            return;
-          }
-          worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, result});
+          this.handleClusterMasterRequest(worker, msg, handle).catch((e)=>{});
           return;
         }
       })
@@ -605,10 +636,6 @@ class WSGILite extends DefSubRoute {
       socket.setTimeout(0);
     });
   }
-
-  // get server() {
-  //   return this._server;
-  // }
 }
 
 module.exports = {
