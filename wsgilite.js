@@ -384,7 +384,7 @@ class WSGILite extends DefSubRoute {
   removeClusterMasterResponseHandler(clusterMasterResponseHandler) {
     this.clusterMasterResponseHandlers = this.clusterMasterResponseHandlers.filter((item)=>item !== clusterMasterResponseHandler);
   }
-  requestActionOnClusterMaster(data) {
+  requestActionOnClusterMaster(data, timeout) {
     let requestId = `${process.pid}_${Date.now()}_${Math.floor(Math.random()*Number.MAX_SAFE_INTEGER)}`;
     let msgRequest = {event: MSG_WSGILITE_DO_THINGS_MASTER, requestId, data};
 
@@ -393,6 +393,16 @@ class WSGILite extends DefSubRoute {
         let worker;
         let handle;
         let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, requestId};
+        if (timeout && timeout > 0) {
+          setTimeout(() => {
+            let e = new Error('Timeout');
+            msgResponse.error = e;
+            msgResponse.errorMessage = e.toString();
+            msgResponse.errorStacktrace = e.stack;
+            msgResponse.event = MSG_WSGILITE_DO_THINGS_WORKER_FAILURE;
+            reject(msgResponse);
+          }, timeout);
+        }
 
         this.handleClusterMasterRequest(worker, msgRequest, handle).catch((e)=>{
           msgResponse.error = e;
@@ -418,6 +428,17 @@ class WSGILite extends DefSubRoute {
       };
       this.addClusterMasterResponseHandler(handler);
       process.send(msgRequest);
+
+      if (timeout && timeout > 0) {
+        setTimeout(() => {
+          this.removeClusterMasterResponseHandler(handler);
+
+          let e = new Error('Timeout');
+          let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, error: e, errorMessage: e.toString(), errorStacktrace: e.stack}
+          msgResponse.event = MSG_WSGILITE_DO_THINGS_WORKER_FAILURE;
+          reject(msgResponse);
+        }, timeout);
+      }
     });
   }
   handleClusterMasterRequest(worker, msg, handle) {
@@ -429,7 +450,7 @@ class WSGILite extends DefSubRoute {
     const errorHandler = (e) => {
       if (worker && (!errorHandled)) {
         console.log(e);
-        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, error: e, errorMessage: e.toString(), errorStacktrace: e.stacktrace});
+        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, error: e, errorMessage: e.toString(), errorStacktrace: e.stack});
       }
       errorHandled = true;
       return Promise.reject(e);

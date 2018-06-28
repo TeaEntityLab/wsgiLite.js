@@ -199,6 +199,21 @@ wsgilite.GET('/requestActionOnClusterMaster', async function (request, response,
     return e.errorMessage;
   });
 });
+// Post jobs to cluster master(Timeout cases)
+wsgilite.addClusterMasterRequestHandler(async (worker, msg, handle) => {
+  if (msg && msg.data && msg.data.action === 'streaming_timeout') {
+    var rp = require('request-promise-native');
+    await rp.get('https://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_30mb.mp4');
+    return 'ok';
+  }
+});
+wsgilite.GET('/requestActionOnClusterMasterTimeout', async function (request, response, meta) {
+  // Timeout for 3000 ms
+  return wsgilite.requestActionOnClusterMaster({action: 'streaming_timeout'}, 3000).catch((e)=>{
+    console.log(`I got error: ${e.errorStacktrace}`);
+    return e.errorStacktrace;
+  });
+});
 // if (require('cluster').isMaster) {
 //   // It could be called on cluster master
 //   wsgilite.requestActionOnClusterMaster({action: 'readrecord'}).catch((e)=>{
