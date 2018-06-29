@@ -73,8 +73,8 @@ const wsgilite = new WSGILite({
   // processNum: 0, // Single process
   // createServerOptions: {}, // Additional createServer options for http/https.createServer(options)
   onServerCreated: function (httpServer) {
-    httpServer.timeout = 60*1000;
-    console.log('server.timeout set');
+    httpServer.maxHeadersCount = 0;
+    console.log('server.maxHeadersCount set');
   }, // Callback on one of servers created(this will be called in Multiple processes)
   onMessageMaster: function (worker, msg, handle) {
     console.log(`master got message: ${msg.event}`);
@@ -202,8 +202,17 @@ wsgilite.GET('/requestActionOnClusterMaster', async function (request, response,
 // Post jobs to cluster master(Timeout cases)
 wsgilite.addClusterMasterRequestHandler(async (worker, msg, handle) => {
   if (msg && msg.data && msg.data.action === 'streaming_timeout') {
-    var rp = require('request-promise-native');
-    await rp.get('https://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_30mb.mp4');
+    const snooze = require('fpEs/fp').snooze;
+    let startTimestamp = Date.now();
+    while(Date.now() - startTimestamp < 5*1000) {
+      await snooze(500);
+
+      if (msg.cancel) {
+        throw new Error('cluster master 5secs job: cancelled');
+      }
+    }
+    console.log(msg);
+
     return 'ok';
   }
 });

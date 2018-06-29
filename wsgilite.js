@@ -395,7 +395,10 @@ class WSGILite extends DefSubRoute {
         let handle;
         let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS, requestId};
         if (timeout && timeout > 0) {
-          setTimeout(() => {
+          debounce(() => {
+            msgRequest.cancel = true;
+            msgResponse.cancel = true;
+
             let e = new Error('Timeout');
             msgResponse.error = e;
             msgResponse.errorMessage = e.toString();
@@ -417,12 +420,12 @@ class WSGILite extends DefSubRoute {
     }
 
     return new Promise((resolve, reject) => {
-      let handler = (msg, handle) => {
-        if (msg.requestId === requestId) {
-          if (msg && msg.event === MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS) {
-            resolve(msg, handle);
+      let handler = (msgResponse, handle) => {
+        if (msgResponse.requestId === requestId) {
+          if (msgResponse && msgResponse.event === MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS) {
+            resolve(msgResponse, handle);
           } else {
-            reject(msg, handle);
+            reject(msgResponse, handle);
           }
           this.removeClusterMasterResponseHandler(handler);
         }
@@ -431,29 +434,33 @@ class WSGILite extends DefSubRoute {
       process.send(msgRequest);
 
       if (timeout && timeout > 0) {
-        setTimeout(() => {
+        debounce(() => {
+          msgRequest.cancel = true;
           this.removeClusterMasterResponseHandler(handler);
 
           let e = new Error('Timeout');
-          let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, timeout, error: e, errorMessage: e.toString(), errorStacktrace: e.stack}
-          msgResponse.event = MSG_WSGILITE_DO_THINGS_WORKER_FAILURE;
+          let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, timeout, error: e, errorMessage: e.toString(), errorStacktrace: e.stack};
+          msgResponse.cancel = true;
           reject(msgResponse);
         }, timeout);
       }
     });
   }
-  handleClusterMasterRequest(worker, msg, handle) {
-    let requestId = msg.requestId;
-    let timeout = msg.timeout;
+  handleClusterMasterRequest(worker, msgRequest, handle) {
+    let requestId = msgRequest.requestId;
+    let timeout = msgRequest.timeout;
     let result = [];
     let errorHandled = false;
     let timeoutMonitor;
 
     const self = this;
-    const errorHandler = (e) => {
+    const errorHandler = (e, meta) => {
+      meta = meta ? meta : {};
       if (worker && (!errorHandled)) {
         console.log(e);
-        worker.send({event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, timeout, error: e, errorMessage: e.toString(), errorStacktrace: e.stack});
+        msgRequest.cancel = true;
+        let msgResponse = {event: MSG_WSGILITE_DO_THINGS_WORKER_FAILURE, requestId, timeout, error: e, errorMessage: e.toString(), errorStacktrace: e.stack};
+        worker.send(Object.assign(msgResponse, meta));
         if (timeoutMonitor) {
           timeoutMonitor.cancel();
         }
@@ -464,7 +471,7 @@ class WSGILite extends DefSubRoute {
     if (timeout && timeout > 0) {
       timeoutMonitor = debounce(() => {
         let e = new Error('Timeout');
-        errorHandler(e).catch(()=>{});
+        errorHandler(e, {cancel: true}).catch(()=>{});
       }, timeout);
     }
 
@@ -478,7 +485,7 @@ class WSGILite extends DefSubRoute {
 
         var anyResult = undefined;
         try {
-          anyResult = clusterMasterRequestHandler(worker, msg, handle);
+          anyResult = clusterMasterRequestHandler(worker, msgRequest, handle);
         } catch (e) {
           return errorHandler(e);
         }

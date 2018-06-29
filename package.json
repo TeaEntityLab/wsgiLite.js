@@ -43,7 +43,7 @@
     "cookies": "^0.7.1",
     "csrf": "^3.0.6",
     "formidable": "^1.2.1",
-    "fpes": "^1.0.42",
+    "fpes": "^1.0.49",
     "route-parser": "0.0.5"
   },
   "devDependencies": {
