@@ -1,20 +1,20 @@
 const {
   WSGILite,
-} = require('../wsgilite');
+} = require('wsgilite/wsgilite');
 const {
   Template,
-} = require('../template');
+} = require('wsgilite/template');
 const {
   mimeMap,
   defMiddlewareServeFileStatic,
   defMiddlewareServeFileStaticWithDirList,
-} = require('../file');
+} = require('wsgilite/file');
 const {
   defFormCsrfCheckRoutes,
   defHeaderCsrfCheckRoutes,
   getCSRF_token,
   generateCSRFFormInput,
-} = require('../csrf');
+} = require('wsgilite/csrf');
 
 // Settings
 
