@@ -628,12 +628,12 @@ class WSGILite extends DefSubRoute {
       // In this case it is an HTTP server
       this._server = this.createServer();
       this._server.timeout = 0;
+      this.config.onServerCreated(this._server);
       this._server.listen(...args);
       if (this.config.logProcessMessage || this.config.debug) {console.log(`Worker ${process.pid} started`);}
       if (this.config.processNum <= 0) {
         this.handleSingleProcessServerSocket();
       }
-      this.config.onServerCreated(this._server);
     }
   }
   terminate() {
