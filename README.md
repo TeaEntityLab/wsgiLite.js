@@ -56,6 +56,17 @@ npm run demo
 
 ## Examples
 
+
+### Simple Routing cases with WebSocket
+
+In this example, we combined wsgilite server and WebSocket server(built by ws([npm](https://www.npmjs.com/package/ws) [github](https://github.com/websockets/ws)))
+
+WSGILite & WebSocket work perfectly together(WSGILite acts just like a native built-in http(s) server)
+
+[Example](https://github.com/TeaEntityLab/wsgiLite.js/blob/master/demo/simple-routing-with-websocket.js)
+
+### Simple Routing cases
+
 ```javascript
 const {
   WSGILite,
