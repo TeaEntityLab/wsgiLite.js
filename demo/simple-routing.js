@@ -192,8 +192,8 @@ wsgilite.GET('/exception', async function (request, response, meta) {
 
 // Timeout
 let routeTimeout = wsgilite.GET('/timeout', async function (request, response, meta) {
-  var rp = require('request-promise-native');
-  await rp.get('https://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_30mb.mp4');
+  var fetch = require('node-fetch');
+  await fetch('https://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_30mb.mp4');
   return "ok";
 });
 routeTimeout.timeout = 5000;

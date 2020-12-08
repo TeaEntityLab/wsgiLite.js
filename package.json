@@ -1,10 +1,11 @@
 {
   "name": "wsgilite",
-  "version": "1.0.66",
+  "version": "1.0.67",
   "description": "Lightweight WSGI framework, inspired by ROR & Laravel frameworks",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "demo": "node demo/simple-routing.js",
     "release": "npm version patch && npm publish && git push && git push --tags"
   },
   "repository": {
@@ -39,16 +40,15 @@
   },
   "homepage": "https://github.com/TeaEntityLab/wsgiLite.js#readme",
   "dependencies": {
-    "blueimp-tmpl": "^3.11.0",
-    "cookies": "^0.7.1",
-    "csrf": "^3.0.6",
-    "formidable": "^1.2.1",
+    "blueimp-tmpl": "^3.19.0",
+    "cookies": "^0.8.0",
+    "csrf": "^3.1.0",
+    "formidable": "^1.2.2",
     "fpes": "^1.0.49",
     "route-parser": "0.0.5"
   },
   "devDependencies": {
-    "loadtest": "^3.0.3",
-    "request": "^2.87.0",
-    "request-promise-native": "^1.0.5"
+    "loadtest": "*",
+    "node-fetch": "^2.6.1"
   }
 }

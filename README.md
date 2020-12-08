@@ -22,6 +22,8 @@ Thus I make this project, and make it simple & almost just a pure nodejs http se
   * Exception-Handling(Exceptions in Middleware & Route handlers will be caught)
   * CSRF Checking
     * (built by csrf([npm](https://www.npmjs.com/package/csrf) [github](https://github.com/pillarjs/csrf)))
+  * CSRF Checking
+    * (built by cookies([npm](https://www.npmjs.com/package/cookies) [github](https://github.com/pillarjs/cookies)))
   * Path parameters parsing, routing path & methods matching
     * (built by route-parser([npm](https://www.npmjs.com/package/route-parser) [github](https://github.com/rcs/route-parser)))
   * Query parameters(built-in module **url**)
@@ -38,6 +40,18 @@ Thus I make this project, and make it simple & almost just a pure nodejs http se
 
 ```bash
 npm i wsgilite
+```
+
+## Demo
+
+```bash
+# Get this repo ready
+git clone https://github.com/TeaEntityLab/wsgiLite.js.git
+cd wsgiLite.js/
+npm install
+
+# The demo server will listen on port 3333
+npm run demo
 ```
 
 ## Examples
@@ -237,8 +251,8 @@ wsgilite.GET('/exception', async function (request, response, meta) {
 
 // Timeout
 let routeTimeout = wsgilite.GET('/timeout', async function (request, response, meta) {
-  var rp = require('request-promise-native');
-  await rp.get('https://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_30mb.mp4');
+  var fetch = require('node-fetch');
+  await fetch('https://www.sample-videos.com/video/mp4/240/big_buck_bunny_240p_30mb.mp4');
   return "ok";
 });
 routeTimeout.timeout = 5000;

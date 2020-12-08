@@ -2,8 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const sep = path.sep;
 
-const Maybe = require('fpEs/maybe');
-
 const {
   actionMetaSkip404,
   actionMetaDoFnAndKeepConfigs,
@@ -28,7 +26,7 @@ const mimeMap = {
 };
 
 function actionGetFileRelativePathFromMeta(meta) {
-  return Maybe.just(meta.relativePath).isPresent() ? meta.relativePath : meta._url_path;
+  return meta.relativePath ? meta.relativePath : meta._url_path;
 }
 function MiddlewareDefaultFileError(request, response, meta) {
   return function (e, pathname) {

@@ -13,7 +13,6 @@ const formidable = require('formidable')
 const Tokens = require('csrf')
 
 const MonadIO = require('fpEs/monadio');
-const Maybe = require('fpEs/maybe');
 const {
   clone,
   debounce,
@@ -139,7 +138,7 @@ class Route {
     }
   }
   tryReturn(response, result) {
-    if (Maybe.just(result).isPresent()) {
+    if (result) {
       response.end(typeof result === 'string' ? result : JSON.stringify(result));
 
       if (this.wsgilite.config.workerServeTimesToRestart > 0) {
@@ -209,25 +208,25 @@ class WSGILite extends DefSubRoute {
   constructor(config) {
     super(null, '');
     this.config = config ? config : {};
-    // this.config.createServerOptions = Maybe.just(this.config.createServerOptions).isPresent() ? this.config.createServerOptions : {};
-    this.config.isHttps = Maybe.just(this.config.isHttps).isPresent() ? this.config.isHttps : false;
-    this.config.csrfMaxAge = Maybe.just(this.config.csrfMaxAge).isPresent() ? this.config.csrfMaxAge : 2*1000*60*60;
+    // this.config.createServerOptions = this.config.createServerOptions ? this.config.createServerOptions : {};
+    this.config.isHttps = this.config.isHttps ? this.config.isHttps : false;
+    this.config.csrfMaxAge = this.config.csrfMaxAge ? this.config.csrfMaxAge : 2*1000*60*60;
     this.config.csrfMaxAge = (+this.config.csrfMaxAge) > 0 ? (+this.config.csrfMaxAge) : 2*1000*60*60;
-    this.config.enableFormParsing = Maybe.just(this.config.enableFormParsing).isPresent() ? !!this.config.enableFormParsing : true;
-    this.config.formidableIncomingFormSettings = Maybe.just(this.config.formidableIncomingFormSettings).isPresent() ? this.config.formidableIncomingFormSettings : {};
+    this.config.enableFormParsing = this.config.enableFormParsing ? !!this.config.enableFormParsing : true;
+    this.config.formidableIncomingFormSettings = this.config.formidableIncomingFormSettings ? this.config.formidableIncomingFormSettings : {};
 
-    this.config.processNum = Maybe.just(this.config.processNum).isPresent() ? this.config.processNum : numCPUs;
-    this.config.softExitWorker = Maybe.just(this.config.softExitWorker).isPresent() ? !!this.config.softExitWorker : true;
-    this.config.workerServeTimesToRestart = Maybe.just(this.config.workerServeTimesToRestart).isPresent() ? (+this.config.workerServeTimesToRestart) : 0;
-    this.config.logProcessMessage = Maybe.just(this.config.logProcessMessage).isPresent() ? !!this.config.logProcessMessage : false;
-    this.config.onServerCreated = Maybe.just(this.config.onServerCreated).isPresent() && typeof this.config.onServerCreated === 'function' ? this.config.onServerCreated : ()=>{};
-    this.config.onMessageMaster = Maybe.just(this.config.onMessageMaster).isPresent() && typeof this.config.onMessageMaster === 'function' ? this.config.onMessageMaster : ()=>{};
-    this.config.onMessageWorker = Maybe.just(this.config.onMessageWorker).isPresent() && typeof this.config.onMessageWorker === 'function' ? this.config.onMessageWorker : ()=>{};
+    this.config.processNum = this.config.processNum ? this.config.processNum : numCPUs;
+    this.config.softExitWorker = this.config.softExitWorker ? !!this.config.softExitWorker : true;
+    this.config.workerServeTimesToRestart = this.config.workerServeTimesToRestart ? (+this.config.workerServeTimesToRestart) : 0;
+    this.config.logProcessMessage = this.config.logProcessMessage ? !!this.config.logProcessMessage : false;
+    this.config.onServerCreated = this.config.onServerCreated && typeof this.config.onServerCreated === 'function' ? this.config.onServerCreated : ()=>{};
+    this.config.onMessageMaster = this.config.onMessageMaster && typeof this.config.onMessageMaster === 'function' ? this.config.onMessageMaster : ()=>{};
+    this.config.onMessageWorker = this.config.onMessageWorker && typeof this.config.onMessageWorker === 'function' ? this.config.onMessageWorker : ()=>{};
 
-    this.config.debug = Maybe.just(this.config.debug).isPresent() ? !!this.config.debug : false;
+    this.config.debug = this.config.debug ? !!this.config.debug : false;
 
-    this.config.middleware404 = Maybe.just(this.config.middleware404).isPresent() ? this.config.middleware404 : MiddlewareDefault404;
-    this.config.middlewareCatchException = Maybe.just(this.config.middlewareCatchException).isPresent() ? this.config.middlewareCatchException : MiddlewareDefaultCatchException;
+    this.config.middleware404 = this.config.middleware404 ? this.config.middleware404 : MiddlewareDefault404;
+    this.config.middlewareCatchException = this.config.middlewareCatchException ? this.config.middlewareCatchException : MiddlewareDefaultCatchException;
 
     this.tokens = new Tokens();
     // this.secret = this.config.secret ? this.config.secret : this.tokens.secretSync();
