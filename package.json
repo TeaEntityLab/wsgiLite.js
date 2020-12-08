@@ -1,11 +1,10 @@
 {
   "name": "wsgilite",
-  "version": "1.0.67",
+  "version": "1.0.69",
   "description": "Lightweight WSGI framework, inspired by ROR & Laravel frameworks",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "demo": "node demo/simple-routing.js",
     "release": "npm version patch && npm publish && git push && git push --tags"
   },
   "repository": {

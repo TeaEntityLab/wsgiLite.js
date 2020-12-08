@@ -60,6 +60,8 @@ const wsgilite = new WSGILite({
         wss2.handleUpgrade(request, socket, head, function done(ws) {
           wss2.emit('connection', ws, request);
         });
+      } else {
+        socket.destroy();
       }
     });
 
