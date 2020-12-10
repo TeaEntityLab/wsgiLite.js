@@ -102,7 +102,9 @@ class Route {
           console.log(`Execution Timeout: '${self.rule}' -> ${self.timeout}ms`);
 
           // NOTE This is for cluster worker exiting
-          process.exit(0);
+          if (cluster.isWorker) {
+            process.exit(0);
+          }
         }, self.timeout);
       }
 
@@ -239,7 +241,6 @@ class WSGILite extends DefSubRoute {
       defMiddlewareGenerateCsrf(this),
     ];
     this.routes = [];
-    this.workers = [];
     this.clusterMasterRequestHandlers = [];
     this.clusterMasterResponseHandlers = [];
     this.isDying = false;
@@ -569,7 +570,6 @@ class WSGILite extends DefSubRoute {
       for (let i = 0; i < this.config.processNum; i++) {
         var worker = cluster.fork();
         if (this.config.logProcessMessage || this.config.debug) {console.log(`worker ${worker.process.pid} forked`);}
-        this.workers.push(worker);
       }
       cluster.on('message', (worker, msg, handle) => {
         if (arguments.length === 2) {
@@ -600,9 +600,9 @@ class WSGILite extends DefSubRoute {
       cluster.on('exit', (worker, code, signal) => {
         if (this.config.logProcessMessage || this.config.debug) {console.log(`worker ${worker.process.pid} died`);}
         if (!this.isDying) {
-          this.workers = this.workers.filter((item) => item.process.pid !== worker.process.pid);
-          this.workers.push(cluster.fork());
-          if (this.config.logProcessMessage || this.config.debug) {console.log(`worker pid list: ${this.workers.map((item)=>item.process.pid)}`);}
+          const worker = cluster.fork();
+          if (this.config.logProcessMessage || this.config.debug) {console.log(`worker ${worker.process.pid} forked`);}
+          // if (this.config.logProcessMessage || this.config.debug) {console.log(`worker pid list: ${Object.keys(cluster.workers).map((key)=>cluster.workers[key].process.pid)}`);}
           return;
         }
       });
@@ -638,16 +638,14 @@ class WSGILite extends DefSubRoute {
   terminate() {
     if (cluster.isMaster) {
       this.isDying = true;
-      this.workers.forEach((worker) => {
+      Object.keys(cluster.workers).forEach((workerKey) => {
+        const worker = cluster.workers[workerKey]
         if (this.config.softExitWorker) {
           worker.send({event: MSG_WSGILITE_TERMINATE_WORKER});
         } else {
           worker.kill();
         }
       });
-      while (this.workers.length > 0) {
-          this.workers.pop();
-      }
 
       if (this.config.processNum <= 0 && this._server) {
         this.terminateForSingleProcessServer();
