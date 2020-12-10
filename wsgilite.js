@@ -103,7 +103,7 @@ class Route {
 
           // NOTE This is for cluster worker exiting
           if (cluster.isWorker) {
-            process.exit(0);
+            this.wsgilite.terminateForClusterWorkerServer()
           }
         }, self.timeout);
       }
@@ -147,7 +147,7 @@ class Route {
         this.wsgilite.serveTimes ++;
         if (this.wsgilite.serveTimes >= this.wsgilite.config.workerServeTimesToRestart && cluster.isWorker) {
           // NOTE The cluster worker will auto-restart to avoid memory leaks.
-          process.exit(0);
+          this.wsgilite.terminateForClusterWorkerServer()
         }
       }
     }
@@ -611,7 +611,7 @@ class WSGILite extends DefSubRoute {
         if (this.config.logProcessMessage || this.config.debug) {console.log(msg);}
         this.config.onMessageWorker(msg, handle);
         if (msg.event === MSG_WSGILITE_TERMINATE_WORKER) {
-          process.exit(0);
+          this.terminateForClusterWorkerServer()
         }
         if (msg.event === MSG_WSGILITE_DO_THINGS_WORKER_SUCCESS || msg.event === MSG_WSGILITE_DO_THINGS_WORKER_FAILURE) {
           this.clusterMasterResponseHandlers.forEach((item) => {
@@ -667,6 +667,24 @@ class WSGILite extends DefSubRoute {
     }
 
     setImmediate(() => this._server.emit('close'));
+  }
+  terminateForClusterWorkerServer() {
+
+    // if ((!this.isDying) && cluster.worker && cluster.worker.isConnected()) {
+    //   cluster.worker.disconnect()
+    //   process.on('uncaughtException', (e) => {
+    //     console.log(e);
+    //   })
+    // }
+    // this.isDying = true
+
+    // Close the server
+    this._server.close(() => {
+      if (this.config.debug) {console.log('Server closed!');}
+      process.exit(0);
+      // cluster.worker.kill()
+    });
+    // setImmediate(() => this._server.emit('close'));
   }
   handleSingleProcessServerSocket() {
     // Maintain a hash of all connected sockets
