@@ -51,3 +51,11 @@ curl -s -b /tmp/cj.txt -X POST -H "x-csrf-token: $TOKEN" -F "CSRF_token=$TOKEN" 
 
 - The cookie jar, the extracted token, the POST result, and the
   negative-control result (same POST without token).
+
+## Additional quirks (found by source-level verification)
+
+- Every request without a `CSRF_token` cookie gets `Set-Cookie:
+  CSRF_token=...` globally, on any route — not just `/csrf`.
+- `/upload2`'s header check compares `x-csrf-token` against `meta.CSRF_token`,
+  so the token must also appear in the form body or query — header alone is
+  never sufficient.

@@ -46,6 +46,15 @@ curl -s http://localhost:3333/file/text.txt
   static-file helper, not blocked. Launched from `demo/` it 404s only because
   `demo/demo/` does not exist, not because traversal is prevented.
 
+## Additional quirks (found by source-level verification)
+
+- `redirect()` is internal re-dispatch, not an HTTP 301/302 — it rewrites
+  `meta._url_path` and re-enters the pipeline, so middleware runs twice
+  (duplicate `Set-Cookie` headers on redirected requests).
+- `/file/../<name>` traversal is cwd-dependent: it resolves against
+  `<cwd>/demo/../<name>`, so it serves whatever exists at `<cwd>/<name>` —
+  `package.json` when launched from the repo root, 404 when the file is absent.
+
 ## Evidence
 
 - Response bodies + status codes per route.

@@ -58,6 +58,21 @@ All routes are GET unless noted. Base URL: `http://localhost:3333`.
 - For `/csrf` + `/upload`, record the cookie jar, the token you extracted, and
   the POST result.
 
+
+## When a check fails
+
+Classify before fixing — three different failures need three different repairs:
+
+| Class | Meaning | Repair |
+| --- | --- | --- |
+| Doc drift | The map/VERIFY.md no longer matches the product | Update the doc; the product is fine |
+| Harness failure | The driver, launch, or environment broke | Fix the harness; the product is fine |
+| Product regression | The product's behavior changed for the worse | Report; do not edit the map to match |
+
+Never "fix" a failing check by editing the map to describe the new behavior —
+that hides product regressions. If the new behavior is intentional, the map
+update is a separate reviewed change.
+
 ## Cleanup
 
 - `curl -s http://localhost:3333/terminate` stops the server cleanly.
