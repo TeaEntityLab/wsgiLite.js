@@ -1,5 +1,7 @@
 # Feature: routing
 
+`source_commit: 125808d` · `last_verified_at: 2026-09-22` · `verification_status: passed`
+
 User goal: reach content through the URL space — params, redirects, nested
 paths, static files.
 

@@ -1,5 +1,7 @@
 # Feature: errors
 
+`source_commit: 125808d` · `last_verified_at: 2026-09-22` · `verification_status: passed`
+
 User goal: see failures surface correctly — exceptions, timeouts, shutdown.
 
 ## Preconditions

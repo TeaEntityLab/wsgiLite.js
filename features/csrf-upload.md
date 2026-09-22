@@ -1,5 +1,7 @@
 # Feature: csrf-upload
 
+`source_commit: 125808d` · `last_verified_at: 2026-09-22` · `verification_status: passed`
+
 User goal: obtain a CSRF token, then submit a protected POST.
 
 ## Preconditions
